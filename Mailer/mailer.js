@@ -44,7 +44,8 @@ function sendSMS(phoneNumber, carrier, text) {
     const carrierMailSuffix = {
         ATT: 'txt.att.net',
         TMO: 'tmomail.net',
-        VZW: 'vtext.com'
+        VZW: 'vtext.com',
+        METRO: 'mymetropcs.com'
     }
     let recipient = `${phoneNumber}@${carrierMailSuffix[carrier]}`
     console.log(recipient);
