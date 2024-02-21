@@ -5,6 +5,9 @@ const mysql = require('mysql2/promise');
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 const fs = require('fs');
+const multer = require('multer');
+const path = require('path');
+
 require('dotenv').config();
 
 const port = process.env.SERVER_PORT;
@@ -59,6 +62,32 @@ app.post('/saveFile', (req, res) => {
       res.status(200).send('File saved successfully');
   });
 });
+/////////////////////////////////////////////
+
+
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+      cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+      cb(null, file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
+
+// File upload route
+app.post('/upload/file', upload.single('file'), (req, res) => {
+  res.json({ filename: req.file.originalname });
+});
+
+// File download route
+app.get('/download/:filename', (req, res) => {
+  const filename = req.params.filename;
+  res.download(path.join(__dirname, 'uploads', filename));
+});
+/////////////////////////////////////////////////
+
 
 app.listen(port, () => console.log(`Server listening on http://localhost:${process.env.SERVER_PORT}`));
 
