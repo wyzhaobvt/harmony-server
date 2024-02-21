@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
+const fs = require('fs');
 require('dotenv').config();
 
 const port = process.env.SERVER_PORT;
@@ -20,6 +21,44 @@ app.use(cors({
 app.get("/", (req, res) => {
   res.send("Server is functioning properly.")
 })
+
+
+// Define a route to handle file saving to local drive
+app.post('/saveFile', (req, res) => {
+  const { fileName, fileContent, recipient } = req.body;
+  
+  // Check if all required parameters are provided
+  if (!fileName || !fileContent || !recipient) {
+      return res.status(400).send('Missing parameters');
+  }
+  /*
+  file info object to send to db
+  {
+    id, userOwnerID, teamsSharedID, data, deleted
+  }
+  this is the front end form 
+  convert to react
+  <form action="/profile" method="post" enctype="multipart/form-data">
+    <input type="file" name="avatar" />
+  </form>
+  */
+
+  // Here you might have some logic to determine the recipient's contact information,
+  // such as their email address, or username, or any other identifier.
+
+  // Assuming recipientContactInfo is obtained
+
+  // Write the file to the recipient's location
+  const filePath = `/recipient/${fileName}.txt`;
+  fs.writeFile(filePath, fileContent, (err) => {
+      if (err) {
+          console.error(err);
+          return res.status(500).send('Error saving file');
+      }
+      console.log(`File saved to ${filePath}`);
+      res.status(200).send('File saved successfully');
+  });
+});
 
 app.listen(port, () => console.log(`Server listening on http://localhost:${process.env.SERVER_PORT}`));
 
