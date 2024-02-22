@@ -1,3 +1,5 @@
+// Current GMAIL account found in the .env file is inactive so will not work
+
 const nodemailer = require("nodemailer");
 const fs = require('fs');
 const { log } = require("console");
@@ -64,7 +66,7 @@ function sendSMS(phoneNumber, carrier, text) {
     });
 }
 
-sendEmail('joshluca98@gmail.com', 'Sample Email', sampleEmailContent)
-sendSMS(2094943706, 'VZW', 'Sample SMS')
+sendEmail('joshluca98@gmail.com', 'Sample Email 2-22', sampleEmailContent)
+sendSMS(2093289356, 'VZW', 'Sample SMS')
 
 module.exports = { sendEmail, sendSMS };
