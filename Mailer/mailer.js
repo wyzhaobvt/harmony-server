@@ -1,48 +1,40 @@
-// Current GMAIL account found in the .env file is inactive so will not work
-
-const nodemailer = require("nodemailer");
-const fs = require('fs');
-const { log } = require("console");
-
 require('dotenv').config();
-
-const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_APP_PASSWORD
-    },
-});
-
-const sampleEmailContent = "<p>Test paragraph</p>"
+const fs = require('fs');
+const sgMail = require('@sendgrid/mail')
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 function sendEmail(recipient, subject, content) {
     const htmlContent = fs.readFileSync('./Mailer/emailTemplate.html', 'utf8').replace('#content', content);
-    const mailOptions = {
-        from: 'Team Harmony',
-        to: recipient,
+    const logo = fs.readFileSync('./Mailer/img/logo.png').toString("base64");
+    const email = {
+        to: recipient, 
+        from: 'joshua.luca.cohort233@gmail.com',
         subject: subject,
         html: htmlContent,
-        attachments: [{
-            filename: 'Logo.png',
-            path: './Mailer/img/Logo.png',
-            cid: 'logo'
-        }]
-    };
-
-
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.error("Error sending email: ", error);
-        } else {
-            console.log("Email sent: ", info.response);
-        }
-    });
+        attachments: [
+            {
+            filename: 'logo.png',
+            contentType: 'image/png',
+            content_id: 'logo',
+            content: logo,
+            disposition: 'inline',
+            }
+        ],
+      }
+      sgMail
+      .send(email)
+      .then(() => {
+        console.log('Email sent')
+      })
+      .catch((error) => {
+        console.error(error.response.body)
+      })
 }
-
-function sendSMS(phoneNumber, carrier, text) {
+const sampleEmailContent = "<p>Test paragraph</p>"
+// sendEmail('joshluca98@gmail.com', 'test', sampleEmailContent)
+  
+    
+function sendSMS(phoneNumber, carrier, subject, text) {
     const carrierMailSuffix = {
         ATT: 'txt.att.net',
         TMO: 'tmomail.net',
@@ -51,22 +43,21 @@ function sendSMS(phoneNumber, carrier, text) {
     }
     let recipient = `${phoneNumber}@${carrierMailSuffix[carrier]}`
     console.log(recipient);
-    const mailOptions = {
-        from: 'Team Harmony',
-        // subject: 'Account',
-        to: recipient,
+    const email = {
+        to: recipient, 
+        from: 'joshua.luca.cohort233@gmail.com',
+        subject: subject,
         text: text,
-    };
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.error("Error sending email: ", error);
-        } else {
-            console.log("SMS sent: ", info.response);
-        }
-    });
+      }
+      sgMail
+      .send(email)
+      .then(() => {
+        console.log('Email sent')
+      })
+      .catch((error) => {
+        console.error(error.response.body)
+      })
 }
+// sendSMS("2093289356", 'VZW', 'Sample Subject', 'Sample SMS')
 
-sendEmail('joshluca98@gmail.com', 'Sample Email 2-22', sampleEmailContent)
-sendSMS(2093289356, 'VZW', 'Sample SMS')
-
-module.exports = { sendEmail, sendSMS };
+module.exports = { sendEmail, sendSMS }
