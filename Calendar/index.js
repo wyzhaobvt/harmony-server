@@ -23,10 +23,6 @@ const sampleEvent = {
     'recurrence': [
       'RRULE:FREQ=DAILY;COUNT=1'
     ],
-    'attendees': [
-      {'email': 'lpage@example.com'},
-      {'email': 'sbrin@example.com'},
-    ],
     'reminders': {
       'useDefault': false,
       'overrides': [
@@ -141,7 +137,7 @@ async function listEvents(calendarName) {
         return;
     }
     console.log('Upcoming events:');
-    events.map((event, i) => {
+    events.forEach((event, i) => {
         const start = event.start.dateTime || event.start.date;
         console.log(`${start} - ${event.summary} - ${event.id}`);
     });
@@ -163,6 +159,25 @@ async function createEvent(calendarName, event) {
             console.log('Event created: %s', event.data.htmlLink);
             });
 }
+// Edits event on the selected calendar
+async function editEvent(calendarName, eventName, updatedEvent) {
+  const eventId = await getEventIdByName(calendarName, eventName)
+  const auth = await authorize();
+  const calendarId = await getCalendarIdByName(calendarName);
+  const calendar = google.calendar({ version: 'v3', auth });
+  calendar.events.update({
+      auth: auth,
+      calendarId: calendarId,
+      eventId: eventId,
+      resource: updatedEvent,
+  }, function(err, event) {
+      if (err) {
+          console.log('There was an error updating the event: ' + err);
+          return;
+      }
+      console.log('Event updated: %s', event.data.htmlLink);
+  });
+}
 // Deletes event from the selected calendar.
 async function deleteEvent(calendarName, eventName) {
     const eventId = await getEventIdByName(calendarName, eventName)
@@ -180,3 +195,4 @@ async function deleteEvent(calendarName, eventName) {
 // listEvents('group1')
 // deleteEvent('Harmony - Group 1', 'CREATED BY HARMONY APP')
 // listCalendars()
+// editEvent('group1', 'Sample Event', sampleEvent)
