@@ -177,5 +177,6 @@ async function deleteEvent(calendarName, eventName) {
 }
 
 // createEvent('Harmony - Group 1', sampleEvent)
-listEvents('Harmony - Group 1')
+// listEvents('group1')
 // deleteEvent('Harmony - Group 1', 'CREATED BY HARMONY APP')
+// listCalendars()
