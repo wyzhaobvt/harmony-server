@@ -8,7 +8,7 @@ function sendEmail(recipient, subject, content) {
     const logo = fs.readFileSync('./Mailer/img/logo.png').toString("base64");
     const email = {
         to: recipient, 
-        from: 'joshua.luca.cohort233@gmail.com',
+        from: 'harmonyapp2024@gmail.com',
         subject: subject,
         html: htmlContent,
         attachments: [
@@ -31,7 +31,7 @@ function sendEmail(recipient, subject, content) {
       })
 }
 const sampleEmailContent = "<p>Test paragraph</p>"
-// sendEmail('joshluca98@gmail.com', 'test', sampleEmailContent)
+sendEmail('joshluca98@gmail.com', 'test', sampleEmailContent)
   
     
 function sendSMS(phoneNumber, carrier, subject, text) {
@@ -45,7 +45,7 @@ function sendSMS(phoneNumber, carrier, subject, text) {
     console.log(recipient);
     const email = {
         to: recipient, 
-        from: 'joshua.luca.cohort233@gmail.com',
+        from: 'harmonyapp2024@gmail.com',
         subject: subject,
         text: text,
       }
