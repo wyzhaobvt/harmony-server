@@ -80,13 +80,13 @@ app.post("/registerUser",
             const user = { "email": req.body.email, "securePassword": hashPW };
 
             //To Do: Create a personal call link/key
-
+            const calllink = "temp"
 
             // Inserting new user into db
             await req.db.query('INSERT INTO users (email, password, username , userCallLink , deleted) VALUES (:email, :password, :email , :calllink , false)', {
                 email: user.email,
                 password: user.securePassword,
-                calllink: "temp"
+                calllink: calllink
             });
 
             const accessToken = jwt.sign(user, process.env.JWT_KEY);
@@ -121,7 +121,7 @@ app.post("/loginUser",
 
             res.secureCookie("token", accessToken)
 
-            res.status(200).json({ "success": true})
+            res.status(200).json({ "success": true })
         } catch (error) {
             console.log(error);
             res.status(500).send("An error has occurred");
@@ -129,12 +129,63 @@ app.post("/loginUser",
     }
 );
 
+//Private Endpoints
+//Authorize JWT
+function authenticateToken(req, res, next) {
+    const token = req.cookies.token
+    if (token == null) { return res.sendStatus(401) };
+  
+    jwt.verify(token, process.env.JWT_KEY, (err, user) => {
+      if (err) { console.log(err); return res.sendStatus(403) }
+      req.user = user;
+      next()
+    })
+  }
+  
+  app.use(authenticateToken);
 
 //Delete User
-
+app.post("/deleteUser",
+    async function (req, res) {
+        try {
+            await req.db.query(`
+            UPDATE users
+            SET deleted = true
+            WHERE email = :email
+            `,
+                {
+                    email : req.user.email
+                }
+            );
+            res.status(200).json({ "success": true })
+        } catch (error) {
+            console.log(error);
+            res.status(500).send("An error has occurred");
+        }
+    }
+);
 
 //Update Username
-
+app.post("/updateUsername",
+    async function (req, res) {
+        try {
+            await req.db.query(`
+            UPDATE users
+            SET username = :username
+            WHERE email = :email
+            `,
+                {
+                    email : req.user.email,
+                    username : req.body.newUsername
+                }
+            );
+            res.status(200).json({ "success": true })
+        } catch (error) {
+            console.log(error);
+            res.status(500).send("An error has occurred");
+        }
+    }
+);
 
 //Functions
 function validatePassword(password) {
