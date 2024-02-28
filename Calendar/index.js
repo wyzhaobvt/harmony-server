@@ -191,8 +191,8 @@ async function deleteEvent(calendarName, eventName) {
     console.log('Event deleted successfully');
 }
 
-// createEvent('Harmony - Group 1', sampleEvent)
+// createEvent('group1', sampleEvent)
 // listEvents('group1')
-// deleteEvent('Harmony - Group 1', 'CREATED BY HARMONY APP')
+deleteEvent('group1', 'CREATED BY HARMONY APP')
 // listCalendars()
 // editEvent('group1', 'Sample Event', sampleEvent)
