@@ -32,7 +32,6 @@ router.post('/upload', upload.single('file'), (req, res) => {
 router.get('/download/:filename', (req, res) => {
     const fileName = req.params.filename;
     const filePath = path.join(__dirname, `../uploads/${fileName}`);
-    console.log("FILEPATH HERE! ", filePath)
   
     res.download(filePath, fileName, (err) => {
       if (err) {
