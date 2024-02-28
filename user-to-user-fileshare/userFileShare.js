@@ -21,7 +21,8 @@ const upload = multer({ storage: storage });
 router.use(express.static(path.join(__dirname, '../uploads')));
 
 // File upload route
-//NOTE: upload.single must be the same as the input name property
+//NOTE: upload.single must be the same as the input element name property
+//e.g. <input type="file" name="file">
 router.post('/upload', upload.single('file'), (req, res) => {
   res.json({ filename: req.file.originalname, data: req.file });
 
