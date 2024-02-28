@@ -20,10 +20,6 @@ const upload = multer({ storage: storage });
 // Serve static files (e.g., uploaded files)
 router.use(express.static(path.join(__dirname, '../uploads')));
 
-router.get('/', (req, res) => {
-    res.send("upload file works!");
-})
-
 // File upload route
 //NOTE: upload.single must be the same as the input name property
 router.post('/upload', upload.single('file'), (req, res) => {
