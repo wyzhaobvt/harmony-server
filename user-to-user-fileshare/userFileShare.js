@@ -126,4 +126,16 @@ async function displayFiles() {
 // Call the function to display files
 displayFiles();
 
+
+Here's the html: 
+<form action="http://localhost:5000/files/upload" enctype="multipart/form-data" method="post">
+        <div class="form-group">
+          <input type="file" class="form-control-file" name="file">
+          <input type="submit" value="Upload file!" class="btn btn-default">            
+        </div>
+    </form>
+    <ul id="fileList">
+    </ul>
+</form>
+
 */
