@@ -6,9 +6,15 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 require('dotenv').config();
 
+const calendarRoutes = require('../Calendar/calendarRoutes');
+
+
+
 const port = process.env.SERVER_PORT;
 
 const app = express();
+
+app.use('/api/calendar', calendarRoutes);
 
 app.use(express.json());
 app.use(cookieParser())

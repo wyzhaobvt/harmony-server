@@ -4,8 +4,8 @@ const process = require('process');
 const {authenticate} = require('@google-cloud/local-auth');
 const {google} = require('googleapis');
 
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
-const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
+const TOKEN_PATH = path.join(process.cwd(), './Calendar/token.json');
+const CREDENTIALS_PATH = path.join(process.cwd(), './Calendar/credentials.json');
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 const sampleEvent = {
@@ -30,7 +30,7 @@ const sampleEvent = {
         {'method': 'popup', 'minutes': 10},
       ],
     },
-  };
+};
 
 // Reads previously authorized credentials from the save file.
 async function loadSavedCredentialsIfExist() {
@@ -78,15 +78,20 @@ async function listCalendars() {
     const res = await calendar.calendarList.list();
     const calendars = res.data.items.filter((calendar) => calendar.accessRole === 'owner');
     if (!calendars || calendars.length === 0) {
-      console.log('No calendars found.');
-      return;
+      // console.log('No calendars found.');
+      throw new Error('No calendars found.');
+      return null
     }
-    console.log('Group Calendars:');
-    calendars.forEach((calendar) => {
-      console.log(`${calendar.summary} - ${calendar.id}`);
-    });
+    // console.log('Group Calendars:');
+    // calendars.forEach((calendar) => {
+    //   console.log(`${calendar.summary} - ${calendar.id}`);
+    // });
+    const simplifiedCalendars = calendars.map((calendar) => ({
+      name: calendar.summary,
+      id: calendar.id
+    }));
+    return simplifiedCalendars;
 }
-
 // Get calendar's ID for use in other functions by inputting its name.
 async function getCalendarIdByName(calendarName) {
     const auth = await authorize(); // Assuming `authorize()` returns the authenticated client
@@ -95,13 +100,15 @@ async function getCalendarIdByName(calendarName) {
     const calendars = res.data.items;
     const targetCalendar = calendars.find(calendar => calendar.summary === calendarName);
     if (!targetCalendar) {
-        throw new Error('Calendar not found');
+        throw new Error(`No calendar with name '${calendarName}' was found.`);
     }
-    return targetCalendar.id;
+    // console.log(targetCalendar.id);
+    return {name: calendarName, id: targetCalendar.id};
 }
 // Get event's ID for use in other functions by inputting its name.
 async function getEventIdByName(calendarName, eventName) {
-    const calendarId = await getCalendarIdByName(calendarName);
+    const calendarIdObject = await getCalendarIdByName(calendarName);
+    const calendarId = calendarIdObject.id
     const auth = await authorize(); // Assuming `authorize()` returns the authenticated client
     const calendar = google.calendar({ version: 'v3', auth });
     const res = await calendar.events.list({
@@ -116,12 +123,13 @@ async function getEventIdByName(calendarName, eventName) {
     if (!targetEvent) {
       throw new Error('Event not found');
     }
-    return targetEvent.id;
+    return {name: eventName, id: targetEvent.id}
 }
 
 // Lists upcoming events on the selected calendar.
 async function listEvents(calendarName) {
-    const calendarId = await getCalendarIdByName(calendarName)
+    const calendarIdObject = await getCalendarIdByName(calendarName)
+    const calendarId = calendarIdObject.id
     const auth = await authorize(); // Assuming `authorize()` returns the authenticated client
     const calendar = google.calendar({version: 'v3', auth});
     const res = await calendar.events.list({
@@ -191,8 +199,25 @@ async function deleteEvent(calendarName, eventName) {
     console.log('Event deleted successfully');
 }
 
+module.exports = {
+  loadSavedCredentialsIfExist,
+    saveCredentials,
+    authorize,
+    listCalendars,
+    getCalendarIdByName,
+    getEventIdByName,
+    listEvents,
+    createEvent,
+    editEvent,
+    deleteEvent
+};
+
+
 // createEvent('group1', sampleEvent)
 // listEvents('group1')
-deleteEvent('group1', 'CREATED BY HARMONY APP')
+// deleteEvent('group1', 'CREATED BY HARMONY APP')
 // listCalendars()
 // editEvent('group1', 'Sample Event', sampleEvent)
+
+// getEventIdByName('group1', 'sample')
+// getCalendarIdByName('group1')
