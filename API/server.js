@@ -9,9 +9,13 @@ const UserFileShareRoute = require('../user-to-user-fileshare/userFileShare')
 
 require('dotenv').config();
 
+const calendarRoutes = require('../Calendar/calendarRoutes');
+
 const port = process.env.SERVER_PORT;
 
 const app = express();
+
+app.use('/api/calendar', calendarRoutes);
 
 app.use(express.json());
 app.use(cookieParser())
