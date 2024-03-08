@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 const fs = require('fs');
 const UserFileShareRoute = require('../user-to-user-fileshare/userFileShare')
+const cloudinary = require('../cloudinary/cloudinary')
 
 require('dotenv').config();
 
