@@ -228,7 +228,40 @@ app.post("updateTeamName", async function (req, res) {
 
 //Delete Team
 app.post("deleteTeam", async function (req, res) {
+    try {
+        const userID = await findUID(req.user, req);
+        const ownerCheck = await verifyTeamOwner(req.body.teamUID, userID, req);
+        const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req);
 
+        if (!ownerCheck) {
+            res.status(400).json({"success" : false}.send("Only the owner of a team may delete it"))
+            return
+        }
+
+        //remove team links
+        await req.db.query(`
+        UPDATE teamlinks
+        SET deleted = true
+        WHERE teamID = :teamID`,
+        {
+            teamID : teamID
+        })
+
+        //delete team
+        await req.db.query(
+            `UPDATE teams
+            SET deleted = true
+            WHERE id = :teamID`,
+            {
+                teamID : teamID
+            }
+        )
+        
+        res.status(200).json({"success" : true})
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("An error has occurred");
+    }
 })
 
 //Functions
