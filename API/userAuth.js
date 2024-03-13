@@ -38,7 +38,6 @@ app.use(async function (req, res, next) {
 
 app.use(express.json());
 app.use(cookieParser());
-
 app.use(
   cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,

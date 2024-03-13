@@ -116,6 +116,8 @@ app.post("/addToTeam", async function (req, res) {
 
     //to do, check if command giver either is owner or member of team
 
+    //optional : create a duplicate checker
+
     await req.db.query(
       `INSERT INTO teamsLinks(teamID , addUser , deleted) 
             VALUES(:teamID , :addUser , false);`,
@@ -154,12 +156,12 @@ app.post("/removeTeamLink", async function (req, res) {
     const userID = await findUID(req.user, req);
     const isOwner = await verifyTeamOwner(req.body.teamUID, userID, req);
     if (!isOwner) {
-      res.status(400).json({ succcess: false });
+      res.status(400).json({ success: false, message: "User is not Owner" });
       return;
     }
 
-    const targetID = findTargetUID(req.body.targetEmail, req);
-    const teamID = findTeamID(req.body.teamUID, req.body.teamName, req);
+    const targetID = await findTargetUID(req.body.targetEmail, req);
+    const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req);
     await req.db.query(
       `
         UPDATE teamslinks
@@ -182,7 +184,7 @@ app.post("/removeTeamLink", async function (req, res) {
 app.post("/leaveTeam", async function (req, res) {
   try {
     const userID = await findUID(req.user, req);
-    const teamID = await findTeamID(req.body.teamUId, req.body.teamName, req);
+    const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req);
     const ownerCheck = await verifyTeamOwner(req.body.teamUID, userID, req);
 
     if (ownerCheck) {
@@ -214,7 +216,7 @@ app.post("/leaveTeam", async function (req, res) {
 });
 
 //Update Team Name
-app.post("updateTeamName", async function (req, res) {
+app.post("/updateTeamName", async function (req, res) {
   try {
     const userID = await findUID(req.user, req);
     const ownerCheck = await verifyTeamOwner(req.body.teamUID, userID, req);
@@ -256,7 +258,7 @@ app.post("updateTeamName", async function (req, res) {
 });
 
 //Delete Team
-app.post("deleteTeam", async function (req, res) {
+app.post("/deleteTeam", async function (req, res) {
   try {
     const userID = await findUID(req.user, req);
     const ownerCheck = await verifyTeamOwner(req.body.teamUID, userID, req);
@@ -274,9 +276,9 @@ app.post("deleteTeam", async function (req, res) {
     //remove team links
     await req.db.query(
       `
-        UPDATE teamlinks
+        UPDATE teamslinks
         SET deleted = true
-        WHERE teamID = :teamID`,
+        WHERE teamID = :teamID AND deleted = false`,
       {
         teamID: teamID,
       }
@@ -286,7 +288,7 @@ app.post("deleteTeam", async function (req, res) {
     await req.db.query(
       `UPDATE teams
             SET deleted = true
-            WHERE id = :teamID`,
+            WHERE id = :teamID AND deleted = false`,
       {
         teamID: teamID,
       }
