@@ -1,18 +1,25 @@
-const jwt = require("jsonwebtoken")
 const { v4: uuid } = require("uuid");
-require("dotenv").config()
 const ID = "peer:";
 
 /**
  * @typedef {import("socket.io").Server} SocketIoServer
  * @typedef {import("socket.io").Socket} SocketIoSocket
  * @typedef {{socket: SocketIoSocket, currentRoom: string | null}} UserData
+ * @typedef {{groups: string[], username: string, uid: string}} SocketUserData
  */
 
 /**
+ * adds webrtc signaling
  * @param {SocketIoServer} io
+ * @example
+ * // needs user data to function
+ * // set this when authenticating socket
+ * socket.data.user: {
+ *   username: string,
+ *   groups: string[],
+ *   uid: string
+ * }
  */
-
 function peerServer(io) {
   /**
    * @type {Map<string, UserData>}
@@ -24,8 +31,9 @@ function peerServer(io) {
   const rooms = new Set();
 
   io.on("connection", (socket) => {
-    console.log("socket connected");
 
+    console.log("socket connected");
+    socket.data.privateRoom = {id: null, status: null}
     sockets.set(socket.id, { socket, currentRoom: null });
 
     socket.use(([event, ...args], next) => {
@@ -40,8 +48,7 @@ function peerServer(io) {
     });
 
     socket.emit(ID + "me", socket.id);
-    sendUsersOnlineUpdateToConnectedSockets(socket)
-
+    sendUsersOnlineUpdateToConnectedSockets(socket);
 
     socket.on("disconnect", () => {
       const currentRoom = sockets.get(socket.id).currentRoom;
@@ -49,8 +56,8 @@ function peerServer(io) {
         io.sockets.adapter.rooms.get(currentRoom) === undefined;
       if (currentRoom && roomIsClosed) rooms.delete(currentRoom);
       sockets.delete(socket.id);
-      console.log("socket disconnected",socket.id);
-      sendUsersOnlineUpdateToConnectedSockets(socket)
+      console.log("socket disconnected", socket.id);
+      sendUsersOnlineUpdateToConnectedSockets(socket);
     });
 
     socket.on(ID + "usersInRoom", (cb) => {
@@ -67,6 +74,9 @@ function peerServer(io) {
     // if two users in room request offer from newest socket
     socket.on(ID + "joinCall", (roomToJoin, cb) => {
       if (typeof roomToJoin === "function") cb = roomToJoin;
+      if (socket.data.privateRoom.status === "pending") {
+        socket.data.privateRoom.status = "joined"
+      }
       const currentRoom = sockets.get(socket.id).currentRoom;
       if (currentRoom && roomToJoin === currentRoom) {
         cb(currentRoom);
@@ -80,16 +90,16 @@ function peerServer(io) {
       sockets.get(socket.id).currentRoom = roomId;
       rooms.add(roomId);
       cb(roomId);
-      sendUsersOnlineUpdateToConnectedSockets(socket)
+      sendUsersOnlineUpdateToConnectedSockets(socket);
     });
 
     // attempts user call based on id from db
-    socket.on(ID + "callUser", ({id, type}, cb) => {
-      let toSocket = null
+    socket.on(ID + "callUser", ({ id, type }, cb) => {
+      let toSocket = null;
       if (type === "uid") {
         toSocket = getSocketIdFromUid(id);
       } else if (type === "socket") {
-        toSocket = id
+        toSocket = id;
       }
 
       if (!toSocket) {
@@ -100,23 +110,33 @@ function peerServer(io) {
         return;
       }
       const roomId = uuid();
-
-      io.to(toSocket).emit(ID+"callUser", {socketId: socket.id, roomId, username: sockets.get(socket.id).socket.data.user.username});
-      cb({success: true, message: "request sent", roomId})
+      
+      socket.data.privateRoom = {id: roomId, status: "joined"}
+      sockets.get(toSocket).socket.data.privateRoom = {id: roomId, status: "pending"}
+      io.to(toSocket).emit(ID + "callUser", {
+        socketId: socket.id,
+        roomId,
+        username: sockets.get(socket.id).socket.data.user.username,
+      });
+      cb({ success: true, message: "request sent", roomId });
     });
 
-    socket.on(ID+"rejectCall", (socketId)=>{
-      io.to(socketId).emit(ID+"rejectCall",socketId)
-    })
+    socket.on(ID + "rejectCall", (socketId) => {
+      socket.data.privateRoom = {id: null, status: null}
+      const toSocket = sockets.get(socketId)
+      toSocket.socket.data.privateRoom = {id: null, status: null}
+      io.to(socketId).emit(ID + "rejectCall", socketId);
+    });
 
     socket.on(ID + "leaveCall", () => {
+      socket.data.privateRoom = {id: null, status: null};
       const s = sockets.get(socket.id);
       const currentRoom = s.currentRoom;
       const roomIsClosed =
         io.sockets.adapter.rooms.get(currentRoom) === undefined;
       socket.leave(currentRoom);
       if (currentRoom && roomIsClosed) rooms.delete(currentRoom);
-      sendUsersOnlineUpdateToConnectedSockets(socket)
+      sendUsersOnlineUpdateToConnectedSockets(socket);
       s.currentRoom = null;
     });
 
@@ -130,7 +150,7 @@ function peerServer(io) {
         offer: data.offer,
         socketId: socket.id,
         room: data.room,
-        streamTypes: data.streamTypes
+        streamTypes: data.streamTypes,
       });
     });
 
@@ -139,7 +159,7 @@ function peerServer(io) {
         answer: data.answer,
         socketId: socket.id,
         type: data.type,
-        streamTypes: data.streamTypes
+        streamTypes: data.streamTypes,
       });
     });
 
@@ -155,14 +175,19 @@ function peerServer(io) {
     });
 
     /**
-     * emits 'usersOnline' to all sockets that are in any of the same groups as 'fromSocket'
+     * emits `usersOnline` to all sockets that are in any of the same groups as 'fromSocket'
      * @param {SocketIoSocket} fromSocket socket to test sockets against
      */
     function sendUsersOnlineUpdateToConnectedSockets(fromSocket) {
       for (const socketId of io.sockets.adapter.sids.keys()) {
-        const socket = sockets.get(socketId).socket
-        const socketData = socket.data.user
-        if (!socketData.groups.some(groupId=>fromSocket.data.user.groups.includes(groupId))) continue
+        const socket = sockets.get(socketId).socket;
+        const socketData = socket.data.user;
+        if (
+          !socketData.groups.some((groupId) =>
+            fromSocket.data.user.groups.includes(groupId)
+          )
+        )
+          continue;
         io.to(socketId).emit(ID + "usersOnline", getOnlineUsers(socket.id));
       }
     }
@@ -177,22 +202,33 @@ function peerServer(io) {
     }
 
     function getOnlineUsers(socketId) {
-      const myData = sockets.get(socketId).socket.data.user
-      const users = Array.from(io.sockets.adapter.sids.keys()).reduce((prev,curr)=>{
-        const socket = sockets.get(curr).socket
-        const userData = socket.data.user
-        if (curr !== socketId && !userData.groups.some(groupId=>myData.groups.includes(groupId))) {
-          return prev
-        }
-        prev[curr] = {
-          uid: userData.uid,
-          username: userData.username,
-        }
-        return prev
-      },{});
+      const mySocket = sockets.get(socketId).socket
+      const myData = mySocket.data.user;
+      const users = Array.from(io.sockets.adapter.sids.keys()).reduce(
+        (prev, curr) => {
+          const socket = sockets.get(curr).socket;
+          const userData = socket.data.user;
+          if (
+            curr !== socketId &&
+            !userData.groups.some((groupId) => myData.groups.includes(groupId))
+          ) {
+            return prev;
+          }
+          prev[curr] = {
+            uid: userData.uid,
+            username: userData.username,
+          };
+          return prev;
+        },
+        {}
+      );
 
       const activeRooms = io.sockets.adapter.rooms;
-      const groups = (socket.data.user.groups || []).reduce((prev, curr) => {
+      const myGroups = mySocket.data.privateRoom.id ? [...socket.data.user.groups, mySocket.data.privateRoom.id] : socket.data.user.groups
+      // if (mySocket.data.privateRoom.id) {
+      //   myGroups.push(mySocket.data.privateRoom.id)
+      // }
+      const groups = (myGroups || []).reduce((prev, curr) => {
         const usersInRoom = activeRooms.get(curr);
         if (!usersInRoom) {
           prev[curr] = [];
@@ -223,37 +259,4 @@ function peerServer(io) {
   }
 }
 
-const failedAuthAttempts = new Map();
-
-function socketAuth(socket, next) {
-  let failedAuth = failedAuthAttempts.get(socket.conn.remoteAddress);
-
-  if (failedAuth === undefined) {
-    failedAuthAttempts.set(socket.conn.remoteAddress, 0);
-    failedAuth = 0;
-  }
-
-  if (failedAuth > 5) {
-    socket.disconnect(true);
-    return;
-  }
-
-  const token = socket.handshake.auth.token;
-
-  if (!token) {
-    failedAuthAttempts.set(socket.conn.remoteAddress, failedAuth + 1);
-    return next(new Error("unauthorized event"));
-  }
-
-  jwt.verify(token, process.env.SIGNALING_KEY, (err, data) => {
-    if (err) {
-      failedAuthAttempts.set(socket.conn.remoteAddress, failedAuth + 1);
-      return next(new Error("unauthorized event"));
-    }
-    failedAuthAttempts.delete(socket.conn.remoteAddress);
-    socket.data.user = data
-    next();
-  });
-}
-
-module.exports = {peerServer, socketAuth};
+module.exports = peerServer;
