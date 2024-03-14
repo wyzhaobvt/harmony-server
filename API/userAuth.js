@@ -136,7 +136,7 @@ app.post("/loginUser", async function (req, res) {
     res.status(200).json({ success: true });
   } catch (error) {
     console.log(error);
-    res.status(500).json({success: false, message: "An error has occurred"});
+    res.status(500).json({ success: false, message: "An error has occurred" });
   }
 });
 
@@ -159,6 +159,12 @@ function authenticateToken(req, res, next) {
 }
 
 app.use(authenticateToken);
+
+// Logout User
+app.post("/logoutUser", function (req, res) {
+  res.clearCookie("token");
+  res.status(200).json({ success: true, message: "user logged out" });
+});
 
 //Delete User
 app.post("/deleteUser", async function (req, res) {
@@ -226,7 +232,7 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
       {
         uid: req.user.email,
         username: queriedUser.username,
-        groups: teamList.map(team=>team.uid),
+        groups: teamList.map((team) => team.uid),
       },
       process.env.SIGNALING_KEY,
       { expiresIn: 1 }
@@ -236,7 +242,7 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
       .json({ success: true, message: "peer authorized", data: token });
   } catch (error) {
     console.log(error);
-    res.status(500).json({success: false, message: "An error has occurred"});
+    res.status(500).json({ success: false, message: "An error has occurred" });
   }
 });
 
