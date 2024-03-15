@@ -23,7 +23,7 @@ app.use(cookieParser())
 app.use(cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,
     credentials: true,
-  }));
+}));
   
 app.use('/files', UserFileShareRoute)
 
@@ -31,16 +31,31 @@ app.get("/", (req, res) => {
   res.send("Server is functioning properly.")
 })
 
-// Upload user avatar to Cloudinary
+// Upload or update user avatar
 app.post('/uploadAvatar', async (req, res) => {
-  const { image } = req.body;
+  const { image, avatarLink } = req.body;
+  
+  uploadOptions = {
+    upload_preset: "unsigned_upload",
+    allowed_formats: ["png", "jpg", "jpeg", "svg", "ico", "jfif", "webp"],
+  }
+
+  if (avatarLink) {
+    // Find the index of the substring 'user-avatar/'
+    const startIndex = avatarLink.indexOf('user-avatar/') + 'user-avatar/'.length;
+
+    // Find the index of the end of the substring before the file extension
+    const endIndex = avatarLink.lastIndexOf('.');
+
+    // Extract id from 'avatarLink'
+    const publicId = avatarLink.substring(startIndex, endIndex);
+
+    uploadOptions.public_id = publicId;
+  }
 
   const uploadedImage = await cloudinary.uploader.upload(
     image,
-    {
-      upload_preset: "unsigned_upload",
-      allowed_formats: ["png", "jpg", "jpeg", "svg", "ico", "jfif", "webp"],
-    },
+    uploadOptions,
     function (error, result) {
       if (error) {
         console.log(error);
@@ -48,6 +63,10 @@ app.post('/uploadAvatar', async (req, res) => {
       console.log(result);
     }
   );
+
+  // WRITE CODE TO STORE 'uploadedImage.secure_url' TO DATABASE HERE
+
+  console.log(uploadedImage);
 
   try {
     res.status(200).json({ success: true, data: uploadedImage });
@@ -57,7 +76,3 @@ app.post('/uploadAvatar', async (req, res) => {
 });
 
 app.listen(port, () => console.log(`Server listening on http://localhost:${process.env.SERVER_PORT}`));
-
-
-
-
