@@ -83,7 +83,7 @@ app.post("/registerUser",
             const calllink = "temp"
 
             // Inserting new user into db
-            await req.db.query('INSERT INTO users (email, password, username , userCallLink , deleted) VALUES (:email, :password, :email , :calllink , false)', {
+            await req.db.query('INSERT INTO users (email, password, username , userCallLink , profileURL , deleted) VALUES (:email, :password, :email , :calllink , "" , false)', {
                 email: user.email,
                 password: user.securePassword,
                 calllink: calllink
@@ -177,6 +177,28 @@ app.post("/updateUsername",
                 {
                     email : req.user.email,
                     username : req.body.newUsername
+                }
+            );
+            res.status(200).json({ "success": true })
+        } catch (error) {
+            console.log(error);
+            res.status(500).send("An error has occurred");
+        }
+    }
+);
+
+//Update Profile Picture
+app.post("/updatePFP",
+    async function (req, res) {
+        try {
+            await req.db.query(`
+            UPDATE users
+            SET profileURL = :newPFP
+            WHERE email = :email
+            `,
+                {
+                    email : req.user.email,
+                    newPFP : req.body.newPFP
                 }
             );
             res.status(200).json({ "success": true })

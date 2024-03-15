@@ -124,17 +124,8 @@ app.post("/addToTeam", async function (req, res) {
 })
 
 //Load Team List
-app.get("/loadJoinedTeams", async function (req, res) { //endpoint redesign: get list of all owned teams and append with list of all joined teams
+app.get("/loadJoinedTeams", async function (req, res) {
     try {
-
-        //get all joined teams query : SELECT teams.name , teams.uid from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = 2 and teamslinks.deleted = false
-        //get all owned teams query : SELECT uid , name FROM teams WHERE OwnerID = 1 AND deleted = false;
-
-        /*         const [teamList] = await req.db.query(
-                    `SELECT name , uid FROM teams FULL JOIN teamslinks WHERE ownerID = :userID OR addUser = :userID`,
-                    {
-                        userID: userID
-                    }) */
 
         const userID = await findUID(req.user, req);
         
@@ -146,8 +137,6 @@ app.get("/loadJoinedTeams", async function (req, res) { //endpoint redesign: get
             }
         );
         
-        console.log(ownedTeamsArr)
-
         ownedTeamsArr.forEach(element => {
             element.owned = true
         });
