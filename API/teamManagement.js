@@ -106,8 +106,6 @@ app.post("/addToTeam", async function (req, res) {
         const targetID = await findTargetUID(req.body.targetEmail, req);
         const teamID = await findTeamID(req.body.teamID, req.body.teamName, req);
 
-        //to do, check if command giver either is owner or member of team
-
         //optional : create a duplicate checker
 
         await req.db.query(
@@ -126,14 +124,49 @@ app.post("/addToTeam", async function (req, res) {
 })
 
 //Load Team List
-app.get("/loadJoinedTeams", async function (req, res) {
+app.get("/loadJoinedTeams", async function (req, res) { //endpoint redesign: get list of all owned teams and append with list of all joined teams
     try {
+
+        //get all joined teams query : SELECT teams.name , teams.uid from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = 2 and teamslinks.deleted = false
+        //get all owned teams query : SELECT uid , name FROM teams WHERE OwnerID = 1 AND deleted = false;
+
+        /*         const [teamList] = await req.db.query(
+                    `SELECT name , uid FROM teams FULL JOIN teamslinks WHERE ownerID = :userID OR addUser = :userID`,
+                    {
+                        userID: userID
+                    }) */
+
         const userID = await findUID(req.user, req);
-        const [teamList] = await req.db.query(
-            `SELECT name , uid FROM teams FULL JOIN teamslinks WHERE ownerID = :userID OR addUser = :userID`, //redo query to filter out deleted. current issue "deleted column is ambiguous"
+        
+        //get all owned teams
+        const [ownedTeamsArr] = await req.db.query(
+            `SELECT uid , name FROM teams WHERE OwnerID = :ownerID AND deleted = false`,
             {
-                userID: userID
-            })
+                ownerID : userID
+            }
+        );
+        
+        console.log(ownedTeamsArr)
+
+        ownedTeamsArr.forEach(element => {
+            element.owned = true
+        });
+
+        //get all joined teams
+        const [joinedTeamsArr] = await req.db.query(
+            ` SELECT teams.name , teams.uid from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = :addUser and teamslinks.deleted = false`,
+            {
+                addUser : userID
+            }
+        );
+        
+        joinedTeamsArr.forEach(element => {
+            element.owned = false
+        });
+
+        //append teams together
+        const teamList = [...ownedTeamsArr , ...joinedTeamsArr]
+        
         res.status(200).json({ "success": true, "data": teamList })
     } catch (error) {
         console.log(error);
@@ -147,7 +180,7 @@ app.post("/removeTeamLink", async function (req, res) {
         const userID = await findUID(req.user, req);
         const isOwner = await verifyTeamOwner(req.body.teamUID, userID, req)
         if (!isOwner) {
-            res.status(400).json({ "succcess": false , "message" : "User is not Owner"})
+            res.status(400).json({ "succcess": false, "message": "User is not Owner" })
             return
         }
 
@@ -187,7 +220,7 @@ app.post("/leaveTeam", async function (req, res) {
         WHERE addUser = :userID AND teamID = :teamID`,
             {
                 "userID": userID,
-                "teamID" : teamID
+                "teamID": teamID
             });
 
         res.status(200).json({ "succcess": true })
@@ -206,7 +239,7 @@ app.post("/updateTeamName", async function (req, res) {
         const teamID = await findTeamID(req.body.teamUID, req.body.teamNameOld, req);
 
         if (!ownerCheck) {
-            res.status(400).json({"success" : false}.send("Only the owner of a team may change its name"))
+            res.status(400).json({ "success": false }.send("Only the owner of a team may change its name"))
             return
         }
 
@@ -214,14 +247,14 @@ app.post("/updateTeamName", async function (req, res) {
         UPDATE teams
         SET name = :newName
         WHERE ID = :teamID AND UID = :UID AND ownerID = :ownerID AND deleted = false`,
-        {
-            newName : req.body.teamNameNew,
-            ownerID : userID,
-            UID : req.body.teamUID,
-            teamID : teamID
-        })
+            {
+                newName: req.body.teamNameNew,
+                ownerID: userID,
+                UID: req.body.teamUID,
+                teamID: teamID
+            })
 
-        res.status(200).json({"success" : true})
+        res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
         res.status(500).send("An error has occurred");
@@ -236,7 +269,7 @@ app.post("/deleteTeam", async function (req, res) {
         const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req);
 
         if (!ownerCheck) {
-            res.status(400).json({"success" : false}.send("Only the owner of a team may delete it"))
+            res.status(400).json({ "success": false }.send("Only the owner of a team may delete it"))
             return
         }
 
@@ -245,9 +278,9 @@ app.post("/deleteTeam", async function (req, res) {
         UPDATE teamslinks
         SET deleted = true
         WHERE teamID = :teamID AND deleted = false`,
-        {
-            teamID : teamID
-        })
+            {
+                teamID: teamID
+            })
 
         //delete team
         await req.db.query(
@@ -255,11 +288,11 @@ app.post("/deleteTeam", async function (req, res) {
             SET deleted = true
             WHERE id = :teamID AND deleted = false`,
             {
-                teamID : teamID
+                teamID: teamID
             }
         )
-        
-        res.status(200).json({"success" : true})
+
+        res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
         res.status(500).send("An error has occurred");
@@ -307,8 +340,8 @@ async function verifyTeamOwner(teamUID, userID, req) {
     const [queryList] = await req.db.query(`
     SELECT * FROM teams where uid = :uid AND ownerID = :ownerID AND deleted = false`,
         {
-            uid : teamUID,
-            ownerID : userID
+            uid: teamUID,
+            ownerID: userID
         })
 
     if (queryList.length) {
