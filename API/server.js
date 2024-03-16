@@ -53,6 +53,7 @@ app.post('/uploadAvatar', async (req, res) => {
     uploadOptions.public_id = publicId;
   }
 
+  // Upload image to cloudinary
   const uploadedImage = await cloudinary.uploader.upload(
     image,
     uploadOptions,
@@ -70,6 +71,33 @@ app.post('/uploadAvatar', async (req, res) => {
 
   try {
     res.status(200).json({ success: true, data: uploadedImage });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+// Delete user avatar
+app.delete('/deleteAvatar', async (req, res) => {
+  const { avatarLink } = req.body;
+
+  if (avatarLink) {
+    // Find the index of the substring 'user-avatar/'
+    const startIndex = avatarLink.indexOf("user-avatar/");
+
+    // Find the index of the end of the substring before the file extension
+    const endIndex = avatarLink.lastIndexOf(".");
+
+    // Extract public id from 'avatarLink'
+    const publicId = avatarLink.substring(startIndex, endIndex);
+
+    // Delete image from Cloudinary
+    cloudinary.uploader.destroy(publicId, { invalidate: true });
+
+    // Delete image link from database
+  }
+
+  try {
+    res.status(200).json({ success: true, message: "Avatar deleted" });
   } catch (error) {
     console.log(error);
   }
