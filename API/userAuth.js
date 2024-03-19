@@ -252,7 +252,7 @@ app.delete("/deleteAvatar", async (req, res) => {
   try {
     const { avatarLink } = req.body;
     const { email } = req.user;
-
+    
     if (avatarLink) {
       // Find the index of the substring 'user-avatar/'
       const startIndex = avatarLink.indexOf("user-avatar/");
@@ -267,6 +267,16 @@ app.delete("/deleteAvatar", async (req, res) => {
       cloudinary.uploader.destroy(publicId, { invalidate: true });
 
       // Delete image link from database
+      await req.db.query(
+        `
+          UPDATE users
+          SET profileURL = ""
+          WHERE email = :email
+        `,
+        {
+          email
+        }
+      );  
     }
 
     res.status(200).json({ success: true, message: "Avatar deleted" });
