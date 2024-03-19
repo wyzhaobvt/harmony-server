@@ -25,3 +25,5 @@ dist-ssr
 
 # Other
 .env
+Calendar/credentials.json
+Calendar/token.json
