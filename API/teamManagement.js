@@ -279,7 +279,7 @@ app.post("/deleteTeam", async function (req, res) {
                 teamID: teamID
             }
         )
-
+        
         res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
