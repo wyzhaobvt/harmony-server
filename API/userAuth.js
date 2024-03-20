@@ -1,12 +1,12 @@
-const express = require('express');
-const cors = require('cors')
-const jwt = require('jsonwebtoken');
-const mysql = require('mysql2/promise');
+const express = require("express");
+const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
-require('dotenv').config();
+require("dotenv").config();
 
-const port = process.env.SERVER_PORT;
+const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
@@ -211,6 +211,45 @@ app.post("/updateUsername",
     }
 );
 
+// Verify Peer Connection
+app.get("/peer/authenticate", express.json(), async (req, res) => {
+  try {
+    const [[queriedUser]] = await req.db.query(
+      `SELECT * FROM users WHERE email = :userEmail AND password = :userPW AND deleted = 0`,
+      {
+        userEmail: req.user.email,
+        userPW: req.user.securePassword,
+      }
+    );
+    const userID = queriedUser.id;
+    const [teamList] = await req.db.query(
+      `SELECT teams.uid, teams.name
+      FROM teams
+      JOIN teamslinks ON teams.id = teamslinks.teamID
+      JOIN users ON teamslinks.addUser = users.id
+      WHERE users.id = :userID OR teams.ownerID = :userID;`, //redo query to filter out deleted. current issue "deleted column is ambiguous"
+      {
+        userID: userID,
+      }
+    );
+    const token = jwt.sign(
+      {
+        uid: req.user.email,
+        username: queriedUser.username,
+        groups: teamList.map((team) => team.uid),
+      },
+      process.env.SIGNALING_KEY,
+      { expiresIn: 1 }
+    );
+    res
+      .status(200)
+      .json({ success: true, message: "peer authorized", data: token });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: "An error has occurred" });
+  }
+});
+
 //Update Profile Picture
 app.post("/updatePFP",
     async function (req, res) {
@@ -257,4 +296,6 @@ async function findUID(userObj, req) {
 
 //Listener
 
-app.listen(port, () => console.log(`Server listening on http://localhost:${process.env.SERVER_PORT}`));
+app.listen(port, () =>
+  console.log(`Server listening on http://localhost:${port}`)
+);
