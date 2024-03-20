@@ -76,8 +76,7 @@ app.post("/createTeam", async function (req, res) {
     try {
         const UID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('');
         const UserID = await findUID(req.user, req);
-
-        //Optional: Create a duplicate name prevention function
+        const linkedName = req.body.teamName.toLowerCase().replaceAll(" " , "-")
 
         //Optional: Create a duplicate uid prevention function
 
@@ -87,7 +86,7 @@ app.post("/createTeam", async function (req, res) {
             {
                 uid: UID,
                 ownerID: UserID,
-                callLink: "temp",
+                callLink: `${linkedName}/${UID}`,
                 name: req.body.teamName
             }
         );
@@ -131,7 +130,7 @@ app.get("/loadJoinedTeams", async function (req, res) {
         
         //get all owned teams
         const [ownedTeamsArr] = await req.db.query(
-            `SELECT uid , name FROM teams WHERE OwnerID = :ownerID AND deleted = false`,
+            `SELECT uid , name , teamCallLink FROM teams WHERE OwnerID = :ownerID AND deleted = false`,
             {
                 ownerID : userID
             }
@@ -143,7 +142,7 @@ app.get("/loadJoinedTeams", async function (req, res) {
 
         //get all joined teams
         const [joinedTeamsArr] = await req.db.query(
-            ` SELECT teams.name , teams.uid from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = :addUser and teamslinks.deleted = false`,
+            ` SELECT teams.name , teams.uid , teams.teamCallLink from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = :addUser and teamslinks.deleted = false`,
             {
                 addUser : userID
             }
@@ -280,7 +279,7 @@ app.post("/deleteTeam", async function (req, res) {
                 teamID: teamID
             }
         )
-
+        
         res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);

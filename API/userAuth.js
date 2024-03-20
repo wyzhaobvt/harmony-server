@@ -80,8 +80,10 @@ app.post("/registerUser",
             const hashPW = await bcrypt.hash(req.body.password, 10);
             const user = { "email": req.body.email, "securePassword": hashPW };
 
-            //To Do: Create a personal call link/key
-            const calllink = "temp"
+            //Create a personal call link/key
+            const linkUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('')
+            const hashedLinkHead = await bcrypt.hash(req.body.email, 10)
+            const calllink = `${hashedLinkHead}/${linkUID}`
 
             // Inserting new user into db
             await req.db.query('INSERT INTO users (email, password, username , userCallLink , profileURL , deleted) VALUES (:email, :password, :email , :calllink , "" , false)', {
@@ -149,10 +151,32 @@ function authenticateToken(req, res, next) {
 app.post("/deleteUser",
     async function (req, res) {
         try {
+            const userID = await findUID(req.user, req);
+
+            //remove all user links
+            await req.db.query(`
+            UPDATE userLinks
+            SET deleted = true
+            WHERE userID1 = :id OR usedID2 = :id AND deleted = false`,
+            {
+                id : userID
+            })
+
+            //remove all teams links
+            await req.db.query(`
+            UPDATE teamsLinks
+            SET deleted = true
+            WHERE addUser = :id AND deleted = false`,
+            {
+                id : userID
+            })
+
+            //
+
             await req.db.query(`
             UPDATE users
             SET deleted = true
-            WHERE email = :email
+            WHERE email = :email AND deleted = false
             `,
                 {
                     email : req.user.email
@@ -294,6 +318,18 @@ function validatePassword(password) {
     const forbiddenCheck = !forbiddenList.includes(password.toLowerCase());
 
     return lengthCheck && specialCheck && forbiddenCheck;
+}
+
+//retrieves users id from the stored cookie
+async function findUID(userObj, req) {
+    const [[queriedUser]] = await req.db.query(
+        `SELECT * FROM users WHERE email = :userEmail AND password = :userPW AND deleted = 0`,
+        {
+            "userEmail": userObj.email,
+            "userPW": userObj.securePassword
+        }
+    );
+    return queriedUser.id
 }
 
 //Listener
