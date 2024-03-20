@@ -216,8 +216,10 @@ app.post("/updateUsername",
 app.post("/uploadAvatar", async (req, res) => {
   try {
     const { image, avatarLink } = req.body;
-    const { email } = req.user;
+    const userId = await findUID(req.user, req);
     
+    console.log(avatarLink);
+
     uploadOptions = {
       upload_preset: "unsigned_upload",
       allowed_formats: ["png", "jpg", "jpeg", "svg", "ico", "jfif", "webp"],
@@ -255,10 +257,10 @@ app.post("/uploadAvatar", async (req, res) => {
       `
         UPDATE users
         SET profileURL = :newPFP
-        WHERE email = :email
+        WHERE id = :userId
         `,
       {
-        email,
+        userId,
         newPFP: uploadedImage.secure_url,
       }
     );
@@ -275,7 +277,7 @@ app.post("/uploadAvatar", async (req, res) => {
 app.delete("/deleteAvatar", async (req, res) => {
   try {
     const { avatarLink } = req.body;
-    const { email } = req.user;
+    const userId = await findUID(req.user, req);
     
     if (avatarLink) {
       // Find the index of the substring 'user-avatar/'
@@ -295,15 +297,38 @@ app.delete("/deleteAvatar", async (req, res) => {
         `
           UPDATE users
           SET profileURL = ""
-          WHERE email = :email
+          WHERE id = :userId
         `,
         {
-          email
+          userId
         }
       );  
     }
 
     res.status(200).json({ success: true, message: "Avatar deleted" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("An error has occurred");
+  }
+});
+
+// Get user data
+app.get("/getUser", async (req, res) => {
+  try {
+    const userId = await findUID(req.user, req);
+
+    const userData = await req.db.query(
+      `
+        SELECT email, username, profileURL
+        FROM users
+        WHERE id = :userId
+      `,
+      {
+        userId
+      }
+    );
+
+    res.status(200).json({ success: true, data: userData[0] });
   } catch (error) {
     console.log(error);
     res.status(500).send("An error has occurred");
