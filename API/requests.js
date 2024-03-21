@@ -122,10 +122,28 @@ async function verifyTeamOwner(teamUID, userID, req) {
     }
 }
 
+//checks if the uid exists in the database and outputs true or false in response
+async function UIDChecker(uid, table, req) {
+    const [dupeList] = await req.db.query(
+        `SELECT * FROM :table
+        WHERE uid = :uid AND deleted = false`,
+        {
+            table: table,
+            uid: uid
+        }
+    )
+    if (dupeList.length) {
+        return true
+    }
+    else {
+        return false
+    }
+}
+
 //Endpoints
-app.post("/createFriendRequest" , async function(req , res){
+app.post("/createFriendRequest", async function (req, res) {
     try {
-        
+
     } catch (error) {
         console.log(error);
         res.status(500)
