@@ -123,7 +123,14 @@ async function verifyTeamOwner(teamUID, userID, req) {
 }
 
 //Endpoints
-
+app.post("/createFriendRequest" , async function(req , res){
+    try {
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500)
+    }
+})
 
 //Listener
 
