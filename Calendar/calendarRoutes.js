@@ -59,7 +59,7 @@ router.get('/listevents/:calendarName', async (req, res) => {
 router.post('/createevent', async (req, res) => {
     try {
         await createEvent(req.body.calendar, req.body.event );
-        console.log('/createevent accessed');
+        console.log('/createevent accessed:', req.body.calendar, req.body.event);
         res.json({message: `event created successfully in '${req.body.calendar}'`, event: req.body.event});
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -3,6 +3,7 @@ const path = require('path');
 const process = require('process');
 const {authenticate} = require('@google-cloud/local-auth');
 const {google} = require('googleapis');
+const { log } = require('console');
 
 const TOKEN_PATH = path.join(process.cwd(), './Calendar/token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), './Calendar/credentials.json');
@@ -140,6 +141,17 @@ async function listEvents(calendarName) {
 }
 // Creates event on the selected calendar.
 async function createEvent(calendarName, event) {
+    const processedEvent = {
+      
+        'summary': event.name,
+        'description': event.description,
+        'start': {
+          'dateTime': `${event.date.slice(0,10)}T${event.startTime}:00-07:00`,
+        },
+        'end': {
+          'dateTime': `${event.date.slice(0,10)}T${event.endTime}:00-07:00`,
+        },
+    }
     const auth = await authorize();
     const calendarIdObject = await getCalendarIdByName(calendarName)
     const calendarId = calendarIdObject.id;
@@ -148,9 +160,10 @@ async function createEvent(calendarName, event) {
         calendar.events.insert({
             auth: auth,
             calendarId: calendarId,
-            resource: event,
-            }, function(err, event) {
+            resource: processedEvent,
+            }, function(err, processedEvent) {
             if (err) {
+                console.log(err.message);
                 throw new Error('err')
             }
             });
