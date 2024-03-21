@@ -8,6 +8,7 @@ const {
     getCalendarIdByName,
     getEventIdByName,
     listEvents,
+    listEventsByDate,
     createEvent,
     editEvent,
     deleteEvent
@@ -48,7 +49,13 @@ router.get('/geteventid/:calendarName/:eventName', async (req, res) => {
 
 router.get('/listevents/:calendarName', async (req, res) => {
     try {
-        const events = await listEvents(req.params.calendarName);
+        let events;
+        if (req.query.date) {
+            const date = req.query.date;
+            events = await listEventsByDate(req.params.calendarName, date);
+        } else {
+            events = await listEvents(req.params.calendarName);
+        }
         console.log('/listevents accessed');
         res.json(events);
     } catch (error) {
