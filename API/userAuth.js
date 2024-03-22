@@ -11,6 +11,8 @@ const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
+app.use(express.json({ limit: "50mb" }))
+
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -256,8 +258,6 @@ app.post("/uploadAvatar", async (req, res) => {
   try {
     const { image, avatarLink } = req.body;
     const userId = await findUID(req.user, req);
-    
-    console.log(avatarLink);
 
     uploadOptions = {
       upload_preset: "unsigned_upload",
