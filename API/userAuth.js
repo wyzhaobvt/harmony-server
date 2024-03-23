@@ -192,27 +192,38 @@ app.post("/deleteUser",
     }
 );
 
-//Update Username
-app.post("/updateUsername",
-    async function (req, res) {
-        try {
-            await req.db.query(`
-            UPDATE users
-            SET username = :username
-            WHERE email = :email
-            `,
-                {
-                    email : req.user.email,
-                    username : req.body.newUsername
-                }
-            );
-            res.status(200).json({ "success": true })
-        } catch (error) {
-            console.log(error);
-            res.status(500).send("An error has occurred");
-        }
-    }
-);
+// Update User
+app.post("/updateUser", async function (req, res) {
+  try {
+    const { username, email } = req.body;
+    const userId = await findUID(req.user, req);
+
+    await req.db.query(
+      `
+        UPDATE users
+        SET username = :username, email = :email
+        WHERE id = :userId
+      `,
+      {
+        userId,
+        username,
+        email
+      }
+    );
+
+    // Find User in DB
+    const [[user]] = await req.db.query('SELECT * FROM users WHERE email = :email AND deleted = 0', { email });
+    
+    // Update cookie to reflect new email change
+    const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
+    res.secureCookie("token", accessToken);
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("An error has occurred");
+  }
+});
 
 // Verify Peer Connection
 app.get("/peer/authenticate", express.json(), async (req, res) => {
