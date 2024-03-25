@@ -10,7 +10,6 @@ const fs = require('fs');
 let serverUploadPath =  path.join(__dirname, '../uploads')
 
 if (!fs.existsSync(serverUploadPath)){
-    console.log("creating dir")
     fs.mkdirSync(serverUploadPath);
 } 
 
@@ -59,7 +58,6 @@ router.get('/list', async (req, res) => {
     let fileProps = [];
 
     let files = fs.readdirSync('./uploads', {withFileTypes:true})
-    //console.log("checking files", files)
     for(let fileName of files){
         let data = fs.statSync(path.join(__dirname, `../uploads/${fileName.name}`));
         fileProps.push(data)
