@@ -31,9 +31,7 @@ router.use(express.static(path.join(__dirname, '../uploads')));
 //NOTE: upload.single must be the same as the input element name property
 //e.g. <input type="file" name="file">
 //3/21/24 will i need to a multiple file upload endpoint
-router.post('/upload', upload.single('file'), (req, res) => {
-    console.log("uploading, ", req.file)
-     
+router.post('/upload', upload.single('file'), (req, res) => {     
     res.json({ filename: req.file.originalname, data: req.file });
 
 });
@@ -60,29 +58,20 @@ router.get('/list', async (req, res) => {
     let fileInfo = {};
     let fileProps = [];
 
-    fs.readdir('./uploads', async (err, files) => {
-        if(err){
-            return console.error("Error!: ", err)
-        }
-        fileInfo = {files, dirName: 'uploads'}
-        
-        for(let fileName of files){
-            fs.stat(path.join(__dirname, `../uploads/${fileName}`), (err, data) => {
-                if(err) throw err;
-                fileProps.push(data)
-            });
-        }
-        console.log("file length, ", files.length)
+    let files = fs.readdirSync('./uploads', {withFileTypes:true})
+    //console.log("checking files", files)
+    for(let fileName of files){
+        let data = fs.statSync(path.join(__dirname, `../uploads/${fileName.name}`));
+        fileProps.push(data)
+    }
+    
+    fileInfo = {files, dirName: 'uploads'}
+    if(!fileInfo.properties){
+        fileInfo = {...fileInfo, properties: fileProps}
+    }
+    if(fileInfo.properties){
         return res.send(fileInfo)
-        if(fileInfo.props === undefined) fileInfo.props = fileProps
-        
-        if(fileInfo.props){
-            console.log("props length, ", fileInfo.props)
-        }
-        if(fileInfo.props.length === files.length){
-            
-        }
-    })
+    }
     
 });
 
