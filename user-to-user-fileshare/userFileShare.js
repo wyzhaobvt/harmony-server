@@ -68,7 +68,7 @@ router.get('/list', async (req, res) => {
         fileInfo = {...fileInfo, properties: fileProps}
     }
     if(fileInfo.properties){
-        return res.send(fileInfo)
+        return res.status(200).json(fileInfo)
     }
     
 });
