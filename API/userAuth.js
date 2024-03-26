@@ -66,17 +66,12 @@ app.post("/registerUser",
     async function (req, res) {
         try {
             // Duplicate Email Check
-            const dupeCheckEmail = req.body.email;
-
-            const [testDupes] = await req.db.query(
-                `SELECT * FROM users WHERE email = :dupeCheckEmail AND deleted = 0;`, {
-                dupeCheckEmail,
-            })
-
-            if (testDupes.length) {
-                res.status(409).json({ "success": false, "message": "Email already in use" });
-                return
-            }
+            const dupeEmail = await isDupeEmail(req.body.email, req);
+            
+            if (dupeEmail) {
+              res.status(409).json({ success: false, message: "Email already in use" });
+              return;
+            }      
 
             // Password Encryption
             const hashPW = await bcrypt.hash(req.body.password, 10);
@@ -198,6 +193,16 @@ app.post("/updateUser", async function (req, res) {
     const { username, email } = req.body;
     const userId = await findUID(req.user, req);
 
+    // Duplicate Email Check
+    if (email !== req.user.email) {
+      const dupeEmail = await isDupeEmail(email, req);
+
+      if (dupeEmail) {
+        res.status(409).json({ success: false, message: "Email already in use" });
+        return;
+      }
+    }
+
     await req.db.query(
       `
         UPDATE users
@@ -218,7 +223,7 @@ app.post("/updateUser", async function (req, res) {
     const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
     res.secureCookie("token", accessToken);
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, message: "Profile has been updated successfully" });
   } catch (error) {
     console.log(error);
     res.status(500).send("An error has occurred");
@@ -405,6 +410,22 @@ async function findUID(userObj, req) {
         }
     );
     return queriedUser.id
+}
+
+// Check for duplicate email
+async function isDupeEmail(dupeCheckEmail, req) {
+  const [testDupes] = await req.db.query(
+    `SELECT * FROM users WHERE email = :dupeCheckEmail AND deleted = 0;`,
+    {
+      dupeCheckEmail,
+    }
+  );
+
+  if (testDupes.length) {
+    return true;
+  }
+
+  return false;
 }
 
 //Listener
