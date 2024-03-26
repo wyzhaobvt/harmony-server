@@ -8,10 +8,9 @@
     "start": "nodemon ./API/server.js",
     "user": "nodemon ./API/userAuth.js",
     "team": "nodemon ./API/teamManagement.js",
-    "chat": "nodemon ./API/chat.js",
     "mail": "nodemon ./Mailer/mailer.js",
     "signaling": "nodemon ./Peer/server.js",
-    "start-all": "concurrently npm:start npm:user npm:team npm:signaling npm:chat"
+    "start-all": "concurrently npm:start npm:user npm:team npm:signaling"
   },
   "author": "",
   "license": "ISC",
