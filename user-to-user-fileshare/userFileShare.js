@@ -4,14 +4,20 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// need to use function for GET User id or GET team id
 // Set up multer for file uploads
 //define destination and filename convention
 let serverUploadPath =  path.join(__dirname, '../uploads')
+
+if (!fs.existsSync(serverUploadPath)){
+    fs.mkdirSync(serverUploadPath);
+} 
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, serverUploadPath);
     },
-    filename: function (req, file, cb) {
+    filename: function (req, file, cb) { 
         cb(null, file.originalname);
     }
   });
@@ -19,12 +25,13 @@ const upload = multer({ storage: storage });
 
 // Serve static files (e.g., uploaded files)
 router.use(express.static(path.join(__dirname, '../uploads')));
-
+ 
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
 //e.g. <input type="file" name="file">
-router.post('/upload', upload.single('file'), (req, res) => {
-  res.json({ filename: req.file.originalname, data: req.file });
+//3/21/24 will i need to a multiple file upload endpoint
+router.post('/upload', upload.single('file'), (req, res) => {     
+    res.json({ filename: req.file.originalname, data: req.file });
 
 });
 
@@ -38,24 +45,35 @@ router.get('/download/:filename', (req, res) => {
         console.error('Error downloading file:', err);
         res.status(500).send('Error downloading file');
       }
-    });
-  });
+    }); 
+  }); 
 
 //get file names to render on front end
 //NOTE 2/28/24: This should be improved to have an res.body.id so that only files that are appropriate
 //for that user are returned.
     //MAYBE add dir for specific users and only return files in that dir
     // solution: can add req.params.id => add that like such '/uploads/:id
-router.get('/list', (req, res) => {
-    fs.readdir('./uploads', (err, files) => {
-        if(err){
-            return console.error("Error!: ", err)
-        }
-        return res.send({files})
-    })
+router.get('/list', async (req, res) => {
+    let fileInfo = {};
+    let fileProps = [];
+
+    let files = fs.readdirSync('./uploads', {withFileTypes:true})
+    for(let fileName of files){
+        let data = fs.statSync(path.join(__dirname, `../uploads/${fileName.name}`));
+        fileProps.push(data)
+    }
+    
+    fileInfo = {files, dirName: 'uploads'}
+    if(!fileInfo.properties){
+        fileInfo = {...fileInfo, properties: fileProps}
+    }
+    if(fileInfo.properties){
+        return res.status(200).json(fileInfo)
+    }
+    
 });
 
-  
+
 module.exports = router;
 
 /*
