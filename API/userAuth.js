@@ -83,9 +83,10 @@ app.post("/registerUser",
             const calllink = `${hashedLinkHead}/${linkUID}`
 
             // Inserting new user into db
-            await req.db.query('INSERT INTO users (email, password, username , userCallLink , profileURL , deleted) VALUES (:email, :password, :email , :calllink , "" , false)', {
+            await req.db.query('INSERT INTO users (email, password, username , userCallLink , profileURL , deleted) VALUES (:email, :password, :username , :calllink , "" , false)', {
                 email: user.email,
                 password: user.securePassword,
+                username: req.body.username,
                 calllink: calllink
             });
 
