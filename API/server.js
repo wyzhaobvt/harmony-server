@@ -6,6 +6,8 @@ const cookieParser = require("cookie-parser");
 const path = require("path");
 require("dotenv").config();
 const chatRoutes = require("../Chat/routes");
+const calendarRoutes = require('../Calendar/calendarRoutes');
+
 
 const port = process.env.SERVER_PORT;
 
@@ -45,6 +47,7 @@ app.use(
     credentials: true,
   })
 );
+app.use('/api/calendar', calendarRoutes);
 
 app.use((req, res, next) => {
   res.secureCookie = (name, val, options = {}) => {
