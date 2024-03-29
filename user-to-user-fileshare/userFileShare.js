@@ -7,20 +7,27 @@ const fs = require('fs');
 // need to use function for GET User id or GET team id
 // Set up multer for file uploads
 //define destination and filename convention
-let serverUploadPath =  path.join(__dirname, '../uploads')
 
-if (!fs.existsSync(serverUploadPath)){
-    fs.mkdirSync(serverUploadPath);
-} 
+router.use('*', (req, res, next) => {
+    
+    req.serverUploadPath =  path.join(__dirname, `../uploads/${req.params.chatId}`)
+
+    if (!fs.existsSync(req.serverUploadPath)){
+        fs.mkdirSync(req.serverUploadPath);
+    } 
+
+    next();
+})
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, serverUploadPath);
+        console.log("checking storage: ", req.params)
+        cb(null, req.serverUploadPath);
     },
     filename: function (req, file, cb) { 
         cb(null, file.originalname);
     }
-  });
+});
 const upload = multer({ storage: storage });
 
 // Serve static files (e.g., uploaded files)
@@ -30,7 +37,7 @@ router.use(express.static(path.join(__dirname, '../uploads')));
 //NOTE: upload.single must be the same as the input element name property
 //e.g. <input type="file" name="file">
 //3/21/24 will i need to a multiple file upload endpoint
-router.post('/upload', upload.single('file'), (req, res) => {     
+router.post('/upload/:chatId?', upload.single('file'), (req, res) => {     
     res.json({ filename: req.file.originalname, data: req.file });
 
 });
@@ -53,17 +60,18 @@ router.get('/download/:filename', (req, res) => {
 //for that user are returned.
     //MAYBE add dir for specific users and only return files in that dir
     // solution: can add req.params.id => add that like such '/uploads/:id
-router.get('/list', async (req, res) => {
+router.get('/list/:chatId?', async (req, res) => {
     let fileInfo = {};
     let fileProps = [];
-
-    let files = fs.readdirSync('./uploads', {withFileTypes:true})
+    let {chatId} =  req.params;
+    
+    let files = fs.readdirSync(`./uploads/${chatId === undefined ? chatId : ''}`, {withFileTypes:true})
     for(let fileName of files){
-        let data = fs.statSync(path.join(__dirname, `../uploads/${fileName.name}`));
+        let data = fs.statSync(path.join(__dirname, `../uploads/${chatId === undefined ? chatId : ''}/${fileName.name}`));
         fileProps.push(data)
     }
     
-    fileInfo = {files, dirName: 'uploads'}
+    fileInfo = {files, dirName: `uploads/${chatId === undefined ? chatId : ''}`}
     if(!fileInfo.properties){
         fileInfo = {...fileInfo, properties: fileProps}
     }
