@@ -9,8 +9,9 @@ const fs = require('fs');
 //define destination and filename convention
 
 router.use('*', (req, res, next) => {
-    
-    req.serverUploadPath =  path.join(__dirname, `../uploads/${req.params.chatId}`)
+    let checking = req.params[0].split('/')
+    console.log("checking use all middleware params: ", checking)
+    req.serverUploadPath =  path.join(__dirname, `../uploads/${checking[2]}`)
 
     if (!fs.existsSync(req.serverUploadPath)){
         fs.mkdirSync(req.serverUploadPath);
@@ -21,7 +22,6 @@ router.use('*', (req, res, next) => {
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        console.log("checking storage: ", req.params)
         cb(null, req.serverUploadPath);
     },
     filename: function (req, file, cb) { 
