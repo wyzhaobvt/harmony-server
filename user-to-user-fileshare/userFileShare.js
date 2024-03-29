@@ -65,18 +65,22 @@ router.get('/list/:chatId?', async (req, res) => {
     let fileProps = [];
     let {chatId} =  req.params;
     
-    let files = fs.readdirSync(`./uploads/${chatId === undefined ? chatId : ''}`, {withFileTypes:true})
-    for(let fileName of files){
-        let data = fs.statSync(path.join(__dirname, `../uploads/${chatId === undefined ? chatId : ''}/${fileName.name}`));
-        fileProps.push(data)
-    }
-    
-    fileInfo = {files, dirName: `uploads/${chatId === undefined ? chatId : ''}`}
-    if(!fileInfo.properties){
-        fileInfo = {...fileInfo, properties: fileProps}
-    }
-    if(fileInfo.properties){
-        return res.status(200).json(fileInfo)
+    try{
+        let files = fs.readdirSync(`./uploads/${chatId === 'undefined' ? '' : chatId}`, {withFileTypes:true})
+        for(let fileName of files){
+            let data = fs.statSync(path.join(__dirname, `../uploads/${chatId === 'undefined' ? '' : chatId}/${fileName.name}`));
+            fileProps.push(data)
+        }
+        
+        fileInfo = {files, dirName: [`uploads`,`${chatId === 'undefined' ? '' : chatId}`]}
+        if(!fileInfo.properties){
+            fileInfo = {...fileInfo, properties: fileProps}
+        }
+        if(fileInfo.properties){
+            return res.status(200).json(fileInfo)
+        } 
+    }catch(err){
+        res.send(404).json({error: `error fetching files ${err}`})
     }
     
 });
