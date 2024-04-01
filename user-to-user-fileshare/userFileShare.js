@@ -3,29 +3,25 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const fsPromises = require('fs/promises')
 
 // need to use function for GET User id or GET team id
 // Set up multer for file uploads
 //define destination and filename convention
+router.use('*', (req, res, next) => {
+    let chatId = req.params[0].split('/')
+    
+    req.serverUploadPath =  path.join(__dirname, `../uploads/${chatId[2]}`)
 
+    if (!fs.existsSync(req.serverUploadPath)){
+        fs.mkdirSync(req.serverUploadPath, {recursive: true});
+    } 
 
+    next();
+})
+ 
 const storage = multer.diskStorage({
-    destination: async function (req, file, cb) {
-        let chatDir = req.params[0].split('/')
-        let chatId = chatDir[2]
-        
-        serverUploadPath = path.join(__dirname, `../uploads/${chatId}`)
-        console.log("This is chat id,", chatId)
-
-        try {
-            await fsPromises.access(serverUploadPath)
-            console.log("making new dir", serverUploadPath)
-            await fsPromises.mkdir(serverUploadPath, { recursive: false });
-        } catch (err) {
-            console.log("error in creating directory", err)
-        }
-        cb(null, serverUploadPath);
+    destination: function (req, file, cb) {
+        cb(null, req.serverUploadPath);
     },
     filename: function (req, file, cb) { 
         cb(null, file.originalname);
@@ -34,25 +30,26 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Serve static files (e.g., uploaded files)
-router.use(express.static(path.join(__dirname, '../uploads/**')));
+router.use(express.static(path.join(__dirname, '../uploads')));
  
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
 //e.g. <input type="file" name="file">
 //3/21/24 will i need to a multiple file upload endpoint
-router.post('/upload/:chatId?', upload.single('file'), (req, res) => {     
+router.post('/upload/:chatId', upload.single('file'), (req, res) => {     
     res.json({ filename: req.file.originalname, data: req.file });
+
 });
 
 // File download route
-router.get('/download/:chatId/:filename', (req, res) => {
-    const fileName = req.params.filename;
-    const filePath = path.join(__dirname, `../uploads/${chatId ? chatId+'/'+fileName : fileName}`);
+router.get('/download/:chatId/:fileName', (req, res) => {
+    const {chatId, fileName} = req.params;
+    const filePath = path.join(__dirname, `../uploads/${chatId}/${fileName}`);
   
     res.download(filePath, fileName, (err) => {
       if (err) {
         console.error('Error downloading file:', err);
-        res.sendStatus(500).send('Error in server');
+        res.sendStatus(500).json({'message':'Error downloading file'});
       }
     }); 
   }); 
@@ -62,7 +59,7 @@ router.get('/download/:chatId/:filename', (req, res) => {
 //for that user are returned.
     //MAYBE add dir for specific users and only return files in that dir
     // solution: can add req.params.id => add that like such '/uploads/:id
-router.get('/list/:chatId?', async (req, res) => {
+router.get('/list/:chatId', async (req, res) => {
     let fileInfo = {};
     let fileProps = [];
     let {chatId} =  req.params;
@@ -77,7 +74,8 @@ router.get('/list/:chatId?', async (req, res) => {
         fileInfo = {files, dirName: [`uploads`,`${chatId}`]}
         if(!fileInfo.properties){
             fileInfo = {...fileInfo, properties: fileProps}
-        }else{
+        }
+        if(fileInfo.properties){
             return res.status(200).json(fileInfo)
         } 
     }catch(err){
