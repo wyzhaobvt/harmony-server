@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs/promises')
 
 // need to use function for GET User id or GET team id
 // Set up multer for file uploads
@@ -20,8 +21,21 @@ router.use('*', (req, res, next) => {
 })
  
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, req.serverUploadPath);
+    destination: async function (req, file, cb) {
+        let chatDir = req.params[0].split('/')
+        let chatId = chatDir[2]
+        
+        serverUploadPath = path.join(__dirname, `../uploads/${chatId}`)
+        console.log("This is chat id,", chatId)
+
+        try {
+            await fsPromises.access(serverUploadPath)
+            console.log("making new dir", serverUploadPath)
+            await fsPromises.mkdir(serverUploadPath, { recursive: false });
+        } catch (err) {
+            console.log("error in creating directory", err)
+        }
+        cb(null, serverUploadPath);
     },
     filename: function (req, file, cb) { 
         cb(null, file.originalname);
@@ -30,7 +44,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Serve static files (e.g., uploaded files)
-router.use(express.static(path.join(__dirname, '../uploads')));
+router.use(express.static(path.join(__dirname, '../uploads/**')));
  
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
@@ -38,18 +52,17 @@ router.use(express.static(path.join(__dirname, '../uploads')));
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), (req, res) => {     
     res.json({ filename: req.file.originalname, data: req.file });
-
 });
 
 // File download route
-router.get('/download/:chatId/:fileName', (req, res) => {
-    const {chatId, fileName} = req.params;
-    const filePath = path.join(__dirname, `../uploads/${chatId}/${fileName}`);
+router.get('/download/:filename', (req, res) => {
+    const fileName = req.params.filename;
+    const filePath = path.join(__dirname, `../uploads/${fileName}`);
   
     res.download(filePath, fileName, (err) => {
       if (err) {
         console.error('Error downloading file:', err);
-        res.sendStatus(500).json({'message':'Error downloading file'});
+        res.status(500).send('Error downloading file');
       }
     }); 
   }); 
@@ -74,8 +87,7 @@ router.get('/list/:chatId', async (req, res) => {
         fileInfo = {files, dirName: [`uploads`,`${chatId}`]}
         if(!fileInfo.properties){
             fileInfo = {...fileInfo, properties: fileProps}
-        }
-        if(fileInfo.properties){
+        }else{
             return res.status(200).json(fileInfo)
         } 
     }catch(err){
