@@ -29,9 +29,9 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
-
+const chatDir = path.join(__dirname, '../uploads')
 // Serve static files (e.g., uploaded files)
-router.use(express.static(path.join(__dirname, '../uploads')));
+router.use(express.static(chatDir));
  
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
@@ -49,10 +49,14 @@ router.get('/download/:chatId/:fileName', (req, res) => {
     res.download(filePath, fileName, (err) => {
       if (err) {
         console.error('Error downloading file:', err);
-        res.json({'message':'Error downloading file'}).sendStatus(500);
+        res.json({'message':'Error downloading file'});
       } 
     }); 
   }); 
+
+router.delete('/:chatId/:fileName', (req, res) => {
+    fs.unlink(`${chatDir}/${req.params.fileName}`)
+})
 
 //get file names to render on front end
 //NOTE 2/28/24: This should be improved to have an res.body.id so that only files that are appropriate
