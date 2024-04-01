@@ -75,7 +75,7 @@ router.get('/download/:filename', (req, res) => {
 router.get('/list/:chatId', async (req, res) => {
     let fileInfo = {};
     let fileProps = [];
-    let {chatId} =  req.params;
+    let {chatId} =  req.params; 
     
     try{
         let files = fs.readdirSync(`./uploads/${chatId}`, {withFileTypes:true})
