@@ -14,7 +14,7 @@ router.use('*', (req, res, next) => {
     req.serverUploadPath =  path.join(__dirname, `../uploads/${checking[2]}`)
 
     if (!fs.existsSync(req.serverUploadPath)){
-        fs.mkdirSync(req.serverUploadPath);
+        fs.mkdirSync(req.serverUploadPath, {recursive: true});
     } 
 
     next();
