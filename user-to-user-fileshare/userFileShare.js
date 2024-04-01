@@ -3,26 +3,29 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs/promises')
 
 // need to use function for GET User id or GET team id
 // Set up multer for file uploads
 //define destination and filename convention
 
-router.use('*', (req, res, next) => {
-    let checking = req.params[0].split('/')
-    console.log("checking use all middleware params: ", checking)
-    req.serverUploadPath =  path.join(__dirname, `../uploads/${checking[2]}`)
-
-    if (!fs.existsSync(req.serverUploadPath)){
-        fs.mkdirSync(req.serverUploadPath, {recursive: true});
-    } 
-
-    next();
-})
 
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, req.serverUploadPath);
+    destination: async function (req, file, cb) {
+        let chatDir = req.params[0].split('/')
+        let chatId = chatDir[2]
+        
+        serverUploadPath = path.join(__dirname, `../uploads/${chatId}`)
+        console.log("This is chat id,", chatId)
+
+        try {
+            await fsPromises.access(serverUploadPath)
+            console.log("making new dir", serverUploadPath)
+            await fsPromises.mkdir(serverUploadPath, { recursive: false });
+        } catch (err) {
+            console.log("error in creating directory", err)
+        }
+        cb(null, serverUploadPath);
     },
     filename: function (req, file, cb) { 
         cb(null, file.originalname);
@@ -31,7 +34,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Serve static files (e.g., uploaded files)
-router.use(express.static(path.join(__dirname, '../uploads')));
+router.use(express.static(path.join(__dirname, '../uploads/**')));
  
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
@@ -39,18 +42,17 @@ router.use(express.static(path.join(__dirname, '../uploads')));
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId?', upload.single('file'), (req, res) => {     
     res.json({ filename: req.file.originalname, data: req.file });
-
 });
 
 // File download route
-router.get('/download/:filename', (req, res) => {
+router.get('/download/:chatId/:filename', (req, res) => {
     const fileName = req.params.filename;
-    const filePath = path.join(__dirname, `../uploads/${fileName}`);
+    const filePath = path.join(__dirname, `../uploads/${chatId ? chatId+'/'+fileName : fileName}`);
   
     res.download(filePath, fileName, (err) => {
       if (err) {
         console.error('Error downloading file:', err);
-        res.status(500).send('Error downloading file');
+        res.sendStatus(500).send('Error in server');
       }
     }); 
   }); 
@@ -66,21 +68,20 @@ router.get('/list/:chatId?', async (req, res) => {
     let {chatId} =  req.params;
     
     try{
-        let files = fs.readdirSync(`./uploads/${chatId === 'undefined' ? '' : chatId}`, {withFileTypes:true})
+        let files = fs.readdirSync(`./uploads/${chatId}`, {withFileTypes:true})
         for(let fileName of files){
-            let data = fs.statSync(path.join(__dirname, `../uploads/${chatId === 'undefined' ? '' : chatId}/${fileName.name}`));
+            let data = fs.statSync(path.join(__dirname, `../uploads/${chatId}/${fileName.name}`));
             fileProps.push(data)
         }
         
-        fileInfo = {files, dirName: [`uploads`,`${chatId === 'undefined' ? '' : chatId}`]}
+        fileInfo = {files, dirName: [`uploads`,`${chatId}`]}
         if(!fileInfo.properties){
             fileInfo = {...fileInfo, properties: fileProps}
-        }
-        if(fileInfo.properties){
+        }else{
             return res.status(200).json(fileInfo)
         } 
     }catch(err){
-        res.send(404).json({error: `error fetching files ${err}`})
+        res.sendStatus(500).json({error: `error in server ${err}`})
     }
     
 });
