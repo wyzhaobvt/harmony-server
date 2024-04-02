@@ -131,6 +131,19 @@ app.post("/loginUser",
     }
 );
 
+//Logout User
+app.post("/logoutUser",
+    async function (req, res) {
+      try {
+        res.clearCookie("token");
+        res.status(200).json({ success: true });
+      } catch (error) {
+        console.log(error);
+        res.status(500).send("An error has occurred");
+      }
+    }
+);
+
 //Private Endpoints
 //Authorize JWT
 function authenticateToken(req, res, next) {
