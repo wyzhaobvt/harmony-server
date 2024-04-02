@@ -3,15 +3,17 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const fsPromises = require('fs/promises')
+const fsPromises = require('fs/promises');
+const { Console } = require('console');
 
 // need to use function for GET User id or GET team id
 // Set up multer for file uploads
 //define destination and filename convention
+const uploadDir = path.join(__dirname, '../uploads')
 router.use('*', (req, res, next) => {
     let chatId = req.params[0].split('/')
     
-    req.serverUploadPath =  path.join(__dirname, `../uploads/${chatId[2]}`)
+    req.serverUploadPath = `${uploadDir}/${chatId[2]}`
 
     if (!fs.existsSync(req.serverUploadPath)){
         fs.mkdirSync(req.serverUploadPath, {recursive: true});
@@ -29,9 +31,6 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
-const chatDir = path.join(__dirname, '../uploads')
-// Serve static files (e.g., uploaded files)
-router.use(express.static(chatDir));
  
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
@@ -52,8 +51,34 @@ router.get('/download/:chatId/:fileName', (req, res) => {
         res.json({'message':'Error downloading file'});
       } 
     });  
-  }); 
+  });
 
+//file copy route
+router.post('/:chatId?/:fileName', async (req, res) => {
+    const { chatId, fileName } = req.params;
+    let cleanName = fileName.split('.')
+    const sourcePath = `${uploadDir}/${chatId}/${fileName}`;
+    const destPath = `${uploadDir}/${chatId}/${cleanName[0]}[1].${cleanName[1]}`;
+    
+    fs.access(sourcePath , fs.constants.F_OK, async (err) => {
+      if (err) {
+        console.log(`This file ${err ? 'does not exist' : 'exists'}`);
+      }else {
+        console.log("this is not an error", err)
+      }
+    })
+    fsPromises.copyFile(sourcePath, destPath)
+        .then((x) => {
+
+            res.json({message: 'File copied successfully!'});
+        }) 
+        .catch(err => {
+            console.error(err);
+            res.status(500).json({error: 'Something went wrong!'});
+        });
+})
+
+//file delete route
 router.delete('/:chatId?/:fileName', (req, res) => {
     try{
         let {chatId, fileName} = req.params;
@@ -68,11 +93,7 @@ router.delete('/:chatId?/:fileName', (req, res) => {
     }
 })
 
-//get file names to render on front end
-//NOTE 2/28/24: This should be improved to have an res.body.id so that only files that are appropriate
-//for that user are returned.
-    //MAYBE add dir for specific users and only return files in that dir
-    // solution: can add req.params.id => add that like such '/uploads/:id
+//get file names route depending on the chatId param
 router.get('/list/:chatId', async (req, res) => {
     let fileInfo = {};
     let fileProps = []; 
