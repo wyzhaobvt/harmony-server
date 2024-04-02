@@ -222,16 +222,26 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
       }
     );
     const userID = queriedUser.id;
-    const [teamList] = await req.db.query(
-      `SELECT teams.uid, teams.name
-      FROM teams
-      JOIN teamslinks ON teams.id = teamslinks.teamID
-      JOIN users ON teamslinks.addUser = users.id
-      WHERE users.id = :userID OR teams.ownerID = :userID;`, //redo query to filter out deleted. current issue "deleted column is ambiguous"
+
+    //get all owned teams
+    const [ownedTeamsArr] = await req.db.query(
+      `SELECT uid FROM teams WHERE OwnerID = :ownerID AND deleted = false`,
       {
-        userID: userID,
+        ownerID: userID,
       }
     );
+
+    //get all joined teams
+    const [joinedTeamsArr] = await req.db.query(
+      ` SELECT teams.uid from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = :addUser and teamslinks.deleted = false`,
+      {
+        addUser: userID,
+      }
+    );
+
+    //append teams together
+    const teamList = [...ownedTeamsArr, ...joinedTeamsArr];
+
     const token = jwt.sign(
       {
         uid: req.user.email,
@@ -241,6 +251,7 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
       process.env.SIGNALING_KEY,
       { expiresIn: 1 }
     );
+    
     res
       .status(200)
       .json({ success: true, message: "peer authorized", data: token });
