@@ -55,14 +55,8 @@ router.get('/download/:chatId/:fileName', (req, res) => {
   }); 
 
 router.delete('/:chatId?/:fileName', (req, res) => {
-
     try{
         let {chatId, fileName} = req.params;
-        console.log("checking params", req.params)
-        if(chatId === undefined){
-            chatId = 'communityFiles'
-            console.log('undefined')
-        }
         let filePath = path.join(__dirname, `../uploads/${chatId}/${fileName}`);
         
         fs.unlinkSync(filePath)
