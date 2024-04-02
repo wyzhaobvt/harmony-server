@@ -1,10 +1,10 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
-require('dotenv').config();
 
 const port = process.env.SERVER_PORT;
 
@@ -123,12 +123,11 @@ async function verifyTeamOwner(teamUID, userID, req) {
 }
 
 //checks if the uid exists in the database and outputs true or false in response
-async function UIDChecker(uid, table, req) {
+async function UIDChecker(uid, req) {
     const [dupeList] = await req.db.query(
-        `SELECT * FROM :table
+        `SELECT * FROM requests
         WHERE uid = :uid AND deleted = false`,
         {
-            table: table,
             uid: uid
         }
     )
@@ -141,9 +140,79 @@ async function UIDChecker(uid, table, req) {
 }
 
 //Endpoints
-app.post("/createFriendRequest", async function (req, res) {
+app.post("/createTeamRequest", async function (req, res) {
     try {
+        const userID = await findUID(req.user , req)
+        let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
+        const targetID = await findTargetUID(req.body.targetEmail , req)
+        const dataRaw = {teamName:req.body.teamName,teamID:req.body.teamID}
+        const data = JSON.stringify(dataRaw)
 
+        //duplicate checking
+        while (await UIDChecker(requestUID, req)) {
+            requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('')
+        }
+
+        await req.db.query(`
+        INSERT INTO requests (uid , senderID , recieverID , data , operation , status , deleted)
+        VALUES (:uid , :senderID , :recieverID ,:data , "addToTeam" , "pending" , false);`,
+        {
+            uid : requestUID,
+            senderID : userID,
+            recieverID : targetID,
+            data : data
+        })
+
+        res.status(200).json({success : true})
+    } catch (error) {
+        console.log(error);
+        res.status(500)
+    }
+})
+
+app.get("/loadIncomingTeamRequest" , async function(req , res) {
+    try {
+        const userID = await findUID(req.user , req);
+
+        const [requestList] = await req.db.query( //redo query to return username of sender rather than id
+            `SELECT requests.uid , requests.timeCreated, users.username , users.email
+            FROM requests LEFT JOIN users on requests.SenderID = users.id
+            WHERE requests.status = "pending" AND requests.deleted = false AND requests.recieverID = :userID;`,
+            {
+                userID : userID
+            }
+        )
+
+        res.status(200).json({success : true , data : requestList})
+    } catch (error) {
+        console.log(error);
+        res.status(500)
+    }
+})
+
+app.post("/resolveIncomingTeamRequest" , async function(req , res){
+    try {
+        //Accept/Deny Check
+        const acceptedCheck = req.body.accepted
+
+        //Deny Resolve
+        console.log("denial start")
+        if (!acceptedCheck) {
+            req.db.query(
+                `UPDATE requests
+                SET status = "declined" , deleted = true , timeResolved = now()
+                WHERE uid = :requestUID AND deleted = false`,
+                {
+                    requestUID : req.body.requestUID
+                }
+            )
+            res.status(200).json({success : true})
+            return
+        }
+
+        //Accept Resolve
+
+        res.status(200).json({success : true})
     } catch (error) {
         console.log(error);
         res.status(500)
@@ -151,5 +220,4 @@ app.post("/createFriendRequest", async function (req, res) {
 })
 
 //Listener
-
-app.listen(port, () => console.log(`Server listening on http://localhost:${process.env.SERVER_PORT}`));
+app.listen(port, () => console.log(`Server listening on http://localhost:${port}`));
