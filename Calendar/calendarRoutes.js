@@ -4,6 +4,7 @@ const {
     loadSavedCredentialsIfExist,
     saveCredentials,
     authorize,
+    createCalendar,
     listCalendars,
     getCalendarIdByName,
     getEventIdByName,
@@ -26,6 +27,17 @@ router.get('/listcalendars', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+router.get('/createcalendar', async (req, res) => {
+    try {
+        // console.log(req.query.groupName);
+        await createCalendar(req.query.groupName);
+        console.log('/addcalendar accessed:', req.query.groupName);
+        res.json({message: `calendar created successfully in`});
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+})
 
 router.get('/getcalendarid/:calendarName', async (req, res) => {
     try {

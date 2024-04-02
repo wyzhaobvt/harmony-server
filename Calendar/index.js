@@ -108,6 +108,21 @@ async function listCalendars() {
     }));
     return simplifiedCalendars;
 }
+// Create new calendar for new group.
+async function createCalendar(groupName) {
+  const auth = await authorize(); // Assuming `authorize()` returns the authenticated client
+  const calendar = google.calendar({ version: 'v3', auth });
+  try {
+    const calendarRes = await calendar.calendars.insert({
+      requestBody: {
+        summary: groupName,
+      },
+    });
+    console.log('New calendar created:', calendarRes.data.summary);
+  } catch (err) {
+    console.error('Error creating calendar:', err);
+  }
+}
 // Lists upcoming events on the selected calendar.
 async function listEvents(calendarName) {
   const calendarIdObject = await getCalendarIdByName(calendarName);
@@ -241,6 +256,7 @@ module.exports = {
     saveCredentials,
     authorize,
     listCalendars,
+    createCalendar,
     getCalendarIdByName,
     getEventIdByName,
     listEvents,
