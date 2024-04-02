@@ -51,11 +51,15 @@ router.get('/download/:chatId/:fileName', (req, res) => {
         console.error('Error downloading file:', err);
         res.json({'message':'Error downloading file'});
       } 
-    }); 
+    });  
   }); 
 
 router.delete('/:chatId/:fileName', (req, res) => {
-    fs.unlink(`${chatDir}/${req.params.fileName}`)
+    const {chatId, fileName} = req.params;
+    let filePath = path.join(__dirname, `../uploads/${chatId}/${fileName}`);
+    
+    fs.unlinkSync(filePath)
+    return res.json({'message': 'success', 'status': 200})
 })
 
 //get file names to render on front end
