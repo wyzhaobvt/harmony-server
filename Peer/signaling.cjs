@@ -32,18 +32,17 @@ function peerServer(io) {
 
   io.on("connection", (socket) => {
 
-    console.log("socket connected");
     socket.data.privateRoom = {id: null, status: null}
     sockets.set(socket.id, { socket, currentRoom: null });
 
     socket.use(([event, ...args], next) => {
-      console.log(`Socket emitted: '${event}'`);
+      // console.log(`Socket emitted: '${event}'`);
       next();
     });
 
     socket.on("error", (err) => {
       if (err && err.message === "unauthorized event") {
-        console.log("bad request");
+        // console.log("bad request");
       }
     });
 
@@ -56,7 +55,6 @@ function peerServer(io) {
         io.sockets.adapter.rooms.get(currentRoom) === undefined;
       if (currentRoom && roomIsClosed) rooms.delete(currentRoom);
       sockets.delete(socket.id);
-      console.log("socket disconnected", socket.id);
       sendUsersOnlineUpdateToConnectedSockets(socket);
     });
 
