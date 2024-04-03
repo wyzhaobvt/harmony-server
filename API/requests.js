@@ -102,6 +102,7 @@ async function findTeamID(teamUID, teamName, req) {
             teamName: teamName
         }
     );
+
     return queriedTeam.id
 }
 
@@ -142,10 +143,10 @@ async function UIDChecker(uid, req) {
 //Endpoints
 app.post("/createTeamRequest", async function (req, res) {
     try {
-        const userID = await findUID(req.user , req)
+        const userID = await findUID(req.user, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
-        const targetID = await findTargetUID(req.body.targetEmail , req)
-        const dataRaw = {teamName:req.body.teamName,teamID:req.body.teamID}
+        const targetID = await findTargetUID(req.body.targetEmail, req)
+        const dataRaw = { teamName: req.body.teamName, teamUID: req.body.teamID }
         const data = JSON.stringify(dataRaw)
 
         //duplicate checking
@@ -156,68 +157,100 @@ app.post("/createTeamRequest", async function (req, res) {
         await req.db.query(`
         INSERT INTO requests (uid , senderID , recieverID , data , operation , status , deleted)
         VALUES (:uid , :senderID , :recieverID ,:data , "addToTeam" , "pending" , false);`,
-        {
-            uid : requestUID,
-            senderID : userID,
-            recieverID : targetID,
-            data : data
-        })
+            {
+                uid: requestUID,
+                senderID: userID,
+                recieverID: targetID,
+                data: data
+            })
 
-        res.status(200).json({success : true})
+        res.status(200).json({ success: true })
     } catch (error) {
         console.log(error);
         res.status(500)
     }
 })
 
-app.get("/loadIncomingTeamRequest" , async function(req , res) {
+app.get("/loadIncomingTeamRequest", async function (req, res) {
     try {
-        const userID = await findUID(req.user , req);
+        const userID = await findUID(req.user, req);
 
-        const [requestList] = await req.db.query( //redo query to return username of sender rather than id
+        const [requestList] = await req.db.query(
             `SELECT requests.uid , requests.timeCreated, users.username , users.email
             FROM requests LEFT JOIN users on requests.SenderID = users.id
             WHERE requests.status = "pending" AND requests.deleted = false AND requests.recieverID = :userID;`,
             {
-                userID : userID
+                userID: userID
             }
         )
 
-        res.status(200).json({success : true , data : requestList})
+        res.status(200).json({ success: true, data: requestList })
     } catch (error) {
         console.log(error);
         res.status(500)
     }
 })
 
-app.post("/resolveIncomingTeamRequest" , async function(req , res){
+app.post("/resolveIncomingTeamRequest", async function (req, res) { //remove add to team on the team management file or edit to communinicate redundancy
     try {
         //Accept/Deny Check
         const acceptedCheck = req.body.accepted
 
         //Deny Resolve
-        console.log("denial start")
         if (!acceptedCheck) {
-            req.db.query(
+            await req.db.query(
                 `UPDATE requests
                 SET status = "declined" , deleted = true , timeResolved = now()
                 WHERE uid = :requestUID AND deleted = false`,
                 {
-                    requestUID : req.body.requestUID
+                    requestUID: req.body.requestUID
                 }
             )
-            res.status(200).json({success : true})
+            res.status(200).json({ success: true })
             return
         }
 
         //Accept Resolve
+        else {
+            const [[reqDataRaw]] = await req.db.query(
+                `SELECT recieverID , data FROM requests WHERE uid = :requestUID`
+                ,
+                {
+                    requestUID : req.body.requestUID
+                }
+            );
+            
+            const {teamUID , teamName} = JSON.parse(reqDataRaw.data)
 
-        res.status(200).json({success : true})
+            const targetID = reqDataRaw.recieverID
+            const teamID = await findTeamID(teamUID , teamName, req)
+
+            await req.db.query(
+                `INSERT INTO teamsLinks(teamID , addUser , deleted) 
+                VALUES(:teamID , :addUser , false);`,
+                {
+                    addUser: targetID,
+                    teamID: teamID
+                }
+            )
+            await req.db.query(
+                `UPDATE requests
+                SET status = "accepted" , deleted = true , timeResolved = now()
+                WHERE uid = :requestUID AND deleted = false`,
+                {
+                    requestUID: req.body.requestUID
+                }
+            )
+
+            res.status(200).json({ "success": true })
+        }
     } catch (error) {
         console.log(error);
         res.status(500)
     }
 })
+
+//Need Friends List Endpoints
 
 //Listener
 app.listen(port, () => console.log(`Server listening on http://localhost:${port}`));
