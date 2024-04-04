@@ -41,8 +41,9 @@ const upload = multer({ storage: storage });
 //e.g. <input type="file" name="file">
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), (req, res) => {
-    return res.json({ filename: req.file.originalname, data: req.file })
+    return res.json({ 'filename': req.file.originalname, 'data': req.file })
 });
+
 
 // File download route
 router.get('/download/:chatId/:fileName', (req, res) => {
@@ -54,6 +55,7 @@ router.get('/download/:chatId/:fileName', (req, res) => {
         console.error('Error downloading file:', err);
         res.json({'message':'Error downloading file'});
       } 
+      return res.json({'message': 'Successfully downloaded file', 'file': fileName})
     });  
   });
 
@@ -62,7 +64,7 @@ router.post('/:chatId?/:fileName', async (req, res) => {
     const { chatId, fileName } = req.params;
     const sourcePath = `${uploadDir}/${chatId}/${fileName}`;
     let destPath;
-    
+
     //regex targets comma, period and square bracket
     let cleanName = fileName.split( /[\,\.\[\]]/g);
     //scan directory for files
@@ -72,16 +74,19 @@ router.post('/:chatId?/:fileName', async (req, res) => {
     let fileCopyValue = fileCopyCount.length;
 
     if(fileCopyValue === 1){
+        //if you click on a root file with no copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[1].${cleanName[1]}`;
         fs.copyFileSync(sourcePath, destPath)
     }else if(fileCopyValue > 1 && cleanName.length > 2){
+        //if you click duplicate on the root file that already has copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[3]}`;
         fs.copyFileSync(sourcePath, destPath)
     }else if(fileCopyValue > 1 && cleanName.length == 2){
+        //if you click on a duplicate file
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[1]}`;
         fs.copyFileSync(sourcePath, destPath)
     }
-    return res.json({status: 200, message: 'Copy success', file: fileName})
+    return res.json({'status': 200, 'message': 'Copy success', 'file': fileName})
 })
 
 //file delete route
@@ -95,7 +100,7 @@ router.delete('/:chatId?/:fileName', (req, res) => {
 
     } catch(err) {
         console.error(`Server Error ${err}`);
-        res.send({'message': `Server Error ${err}`});
+        return res.send({'message': `Server Error ${err}`});
     }
 })
 
@@ -118,7 +123,7 @@ router.get('/list/:chatId', async (req, res) => {
         }
         return res.json(fileInfo)
     }catch(err){
-        return res.json({error: `error in server ${err}`})
+        return res.json({'error': `error in server ${err}`})
     }
     
 });
