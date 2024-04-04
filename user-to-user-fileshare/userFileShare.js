@@ -56,20 +56,23 @@ router.get('/download/:chatId/:fileName', (req, res) => {
 //file copy route
 router.post('/:chatId?/:fileName', async (req, res) => {
     const { chatId, fileName } = req.params;
-    let cleanName = fileName.split('.')
+    let cleanName = fileName.split('.');
+    let copyValue = 0;
     const sourcePath = `${uploadDir}/${chatId}/${fileName}`;
-    const destPath = `${uploadDir}/${chatId}/${cleanName[0]}[1].${cleanName[1]}`;
+    let destPath = `${uploadDir}/${chatId}/${cleanName[0]}.${cleanName[1]}`;
     
     fs.access(sourcePath , fs.constants.F_OK, async (err) => {
       if (err) {
         console.log(`This file ${err ? 'does not exist' : 'exists'}`);
       }else {
-        console.log("this is not an error", err)
+        copyValue++
+        destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${copyValue}].${cleanName[1]}`;
+        console.log("Copied")
       }
     })
     fsPromises.copyFile(sourcePath, destPath)
         .then((x) => {
-
+            console.log("copying", x)
             res.json({message: 'File copied successfully!'});
         }) 
         .catch(err => {
