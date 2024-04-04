@@ -58,6 +58,10 @@ router.get('/download/:chatId/:fileName', (req, res) => {
       return res.json({'message': 'Successfully downloaded file', 'file': fileName})
     });  
   });
+ 
+function cleanFileName(dir){
+    return dir.split( /[\,\.\[\]]/g);
+}
 
 //file duplicate route
 router.post('/:chatId?/:fileName', async (req, res) => {
@@ -66,23 +70,24 @@ router.post('/:chatId?/:fileName', async (req, res) => {
     let destPath;
 
     //regex targets comma, period and square bracket
-    let cleanName = fileName.split( /[\,\.\[\]]/g);
+    let cleanName = cleanFileName(fileName)
     //scan directory for files
     let chatDir = fs.readdirSync(`${uploadDir}/${chatId}`);
     //finds amount of file copies in directory
     let fileCopyCount = chatDir.filter(file => file.match(cleanName[0]));
-    let fileCopyValue = fileCopyCount.length;
+    let latestCopy = cleanFileName(fileCopyCount[fileCopyCount.length - 1]);
+    let fileCopyValue = Number(latestCopy[1]) + 1;
 
-    if(fileCopyValue === 1){
+    if(latestCopy.length === 2 && cleanName.length === 2){
         //if you click on a root file with no copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[1].${cleanName[1]}`;
         fs.copyFileSync(sourcePath, destPath)
-    }else if(fileCopyValue > 1 && cleanName.length > 2){
+    }else if(cleanName.length > 2){
         //if you click duplicate on the root file that already has copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[3]}`;
         fs.copyFileSync(sourcePath, destPath)
-    }else if(fileCopyValue > 1 && cleanName.length == 2){
-        //if you click on a duplicate file
+    }else if(cleanName.length === 2 && cleanName[1].length > 1){
+        //if you click on root file that already has copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[1]}`;
         fs.copyFileSync(sourcePath, destPath)
     }
