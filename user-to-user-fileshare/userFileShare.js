@@ -13,11 +13,15 @@ const uploadDir = path.join(__dirname, '../uploads')
 router.use('*', (req, res, next) => {
     let chatId = req.params[0].split('/')
     
-    req.serverUploadPath = `${uploadDir}/${chatId[2]}`
+    if(chatId[2].length > 4){
+        next();
+    } else{
+        req.serverUploadPath = `${uploadDir}/${chatId[2]}`
 
-    if (!fs.existsSync(req.serverUploadPath)){
-        fs.mkdirSync(req.serverUploadPath, {recursive: true});
-    } 
+        if (!fs.existsSync(req.serverUploadPath)){
+            fs.mkdirSync(req.serverUploadPath, {recursive: true});
+        }
+    }
  
     next();
 })
@@ -53,32 +57,31 @@ router.get('/download/:chatId/:fileName', (req, res) => {
     });  
   });
 
-//file copy route
+//file duplicate route
 router.post('/:chatId?/:fileName', async (req, res) => {
     const { chatId, fileName } = req.params;
-    let cleanName = fileName.split('.');
-    let copyValue = 0;
     const sourcePath = `${uploadDir}/${chatId}/${fileName}`;
-    let destPath = `${uploadDir}/${chatId}/${cleanName[0]}.${cleanName[1]}`;
+    let destPath;
     
-    fs.access(sourcePath , fs.constants.F_OK, async (err) => {
-      if (err) {
-        console.log(`This file ${err ? 'does not exist' : 'exists'}`);
-      }else {
-        copyValue++
-        destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${copyValue}].${cleanName[1]}`;
-        console.log("Copied")
-      }
-    })
-    fsPromises.copyFile(sourcePath, destPath)
-        .then((x) => {
-            console.log("copying", x)
-            res.json({message: 'File copied successfully!'});
-        }) 
-        .catch(err => {
-            console.error(err);
-            res.status(500).json({error: 'Something went wrong!'});
-        });
+    //regex targets comma, period and square bracket
+    let cleanName = fileName.split( /[\,\.\[\]]/g);
+    //scan directory for files
+    let chatDir = fs.readdirSync(`${uploadDir}/${chatId}`);
+    //finds amount of file copies in directory
+    let fileCopyCount = chatDir.filter(file => file.match(cleanName[0]));
+    let fileCopyValue = fileCopyCount.length;
+
+    if(fileCopyValue === 1){
+        destPath = `${uploadDir}/${chatId}/${cleanName[0]}[1].${cleanName[1]}`;
+        fs.copyFileSync(sourcePath, destPath)
+    }else if(fileCopyValue > 1 && cleanName.length > 2){
+        destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[3]}`;
+        fs.copyFileSync(sourcePath, destPath)
+    }else if(fileCopyValue > 1 && cleanName.length == 2){
+        destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[1]}`;
+        fs.copyFileSync(sourcePath, destPath)
+    }
+    return res.json({status: 200, message: 'Copy success', file: fileName})
 })
 
 //file delete route
@@ -87,12 +90,12 @@ router.delete('/:chatId?/:fileName', (req, res) => {
         let {chatId, fileName} = req.params;
         let filePath = path.join(__dirname, `../uploads/${chatId}/${fileName}`);
         
-        fs.unlinkSync(filePath)
+        fs.unlinkSync(filePath);
         return res.json({'message': 'success', 'status': 200})
 
     } catch(err) {
-        console.error(`Server Error ${err}`)
-        res.send({'message': `Server Error ${err}`})
+        console.error(`Server Error ${err}`);
+        res.send({'message': `Server Error ${err}`});
     }
 })
 
@@ -103,7 +106,7 @@ router.get('/list/:chatId', async (req, res) => {
     let {chatId} =  req.params; 
     
     try{
-        let files = fs.readdirSync(`./uploads/${chatId}`, {withFileTypes:true})
+        let files = fs.readdirSync(`./uploads/${chatId}`, {withFileTypes:true});
         for(let fileName of files){
             let data = fs.statSync(path.join(__dirname, `../uploads/${chatId}/${fileName.name}`));
             fileProps.push(data)
@@ -111,7 +114,7 @@ router.get('/list/:chatId', async (req, res) => {
          
         fileInfo = {files, dirName: [`uploads`,`${chatId}`]}
         if(!fileInfo.properties){
-            fileInfo = {...fileInfo, properties: fileProps}
+            fileInfo = {...fileInfo, properties: fileProps};
         }
         return res.json(fileInfo)
     }catch(err){
