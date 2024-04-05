@@ -3,16 +3,14 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const fsPromises = require('fs/promises');
-const { Console } = require('console');
 
+//need to add a remove chat directory for when chats get deleted
 // need to use function for GET User id or GET team id
 // Set up multer for file uploads
 //define destination and filename convention
 const uploadDir = path.join(__dirname, '../uploads')
 router.use('*', (req, res, next) => {
     let chatId = req.params[0].split('/')
-    
     if(chatId[2].length > 4){
         next();
     } else{
@@ -22,7 +20,6 @@ router.use('*', (req, res, next) => {
             fs.mkdirSync(req.serverUploadPath, {recursive: true});
         }
     }
- 
     next();
 })
  
@@ -46,22 +43,19 @@ router.post('/upload/:chatId', upload.single('file'), (req, res) => {
 
 
 // File download route
-router.get('/download/:chatId/:fileName', (req, res) => {
+router.get('/download/:chatId/:fileName', async (req, res) => {
     const {chatId, fileName} = req.params;
-    const filePath = path.join(__dirname, `../uploads/${chatId}/${fileName}`);
+    const filePath =  `${uploadDir}/${chatId}/${fileName}`;
+    console.log(filePath, fileName)
   
-    res.download(filePath, fileName, (err) => {
-      if (err) {
-        console.error('Error downloading file:', err);
-        res.json({'message':'Error downloading file'});
-      } 
-      return res.json({'message': 'Successfully downloaded file', 'file': fileName})
-    });  
+    try {
+        fs.access(filePath, fs.constants.F_OK, (err) => {if(err) console.error("error accessing: ",err)});
+        res.download(filePath, fileName, (err) => {if(err)console.error("error downloading: ",err)});
+    } catch (error) {
+        console.error(`Failed to download file: ${error}`);
+        res.status(404).send('File not found');
+    }
   });
- 
-function cleanFileName(dir){
-    return dir.split( /[\,\.\[\]]/g);
-}
 
 //file duplicate route
 router.post('/:chatId?/:fileName', async (req, res) => {
@@ -82,13 +76,13 @@ router.post('/:chatId?/:fileName', async (req, res) => {
         //if you click on a root file with no copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[1].${cleanName[1]}`;
         fs.copyFileSync(sourcePath, destPath)
-    }else if(cleanName.length > 2){
-        //if you click duplicate on the root file that already has copies
-        destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[3]}`;
-        fs.copyFileSync(sourcePath, destPath)
     }else if(cleanName.length === 2 && cleanName[1].length > 1){
         //if you click on root file that already has copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[1]}`;
+        fs.copyFileSync(sourcePath, destPath)
+    }else if(cleanName.length > 2){
+        //if you click duplicate on the root file that already has copies
+        destPath = `${uploadDir}/${chatId}/${cleanName[0]}[${fileCopyValue}].${cleanName[3]}`;
         fs.copyFileSync(sourcePath, destPath)
     }
     return res.json({'status': 200, 'message': 'Copy success', 'file': fileName})
@@ -98,7 +92,7 @@ router.post('/:chatId?/:fileName', async (req, res) => {
 router.delete('/:chatId?/:fileName', (req, res) => {
     try{
         let {chatId, fileName} = req.params;
-        let filePath = path.join(__dirname, `../uploads/${chatId}/${fileName}`);
+        let filePath = `${uploadDir}/${chatId}/${fileName}`;
         
         fs.unlinkSync(filePath);
         return res.json({'message': 'success', 'status': 200})
@@ -135,7 +129,11 @@ router.get('/list/:chatId', async (req, res) => {
 
 
 module.exports = router;
-
+ 
+function cleanFileName(dir){
+    return dir.split( /[\,\.\[\]]/g);
+}
+ 
 /*
 This is how the front end code should look like for fetching file list and downloading and uploading files
 Use this as a guideline
