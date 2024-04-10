@@ -61,10 +61,10 @@ router.post('/:chatId/:fileName', async (req, res) => {
     //scan directory for files
     let chatDir = fs.readdirSync(`${uploadDir}/${chatId}`);
     //finds amount of file copies in directory
-    let fileCopiesArray = chatDir.filter(file => file.match(cleanName[0]));    
+    let fileCopiesArray = chatDir.filter(file => file.match(cleanName[0]));  
+    fileCopiesArray.reverse()  
     let latestCopy;
     let fileCopyValue;
-
     if(fileCopiesArray.length === 1 ){
         //if you click on a root file with no copies
         destPath = `${uploadDir}/${chatId}/${cleanName[0]}(1).${cleanName[1]}`;
@@ -73,7 +73,11 @@ router.post('/:chatId/:fileName', async (req, res) => {
         //if you click on root file that already has copies
         latestCopy = cleanFileName(fileCopiesArray[1]);
         fileCopyValue = Number(latestCopy[1]) + 1;
-        destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[1]}`;
+        if(cleanName.length === 2){
+            destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[1]}`;
+        } else {
+            destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[3]}`;
+        }
         fs.copyFileSync(sourcePath, destPath)
     }
     return res.json({'status': 200, 'message': 'Copy success', 'file': fileName})
