@@ -178,7 +178,7 @@ app.get("/loadIncomingTeamRequest", async function (req, res) {
         const [requestList] = await req.db.query(
             `SELECT requests.uid , requests.timeCreated, users.username , users.email
             FROM requests LEFT JOIN users on requests.SenderID = users.id
-            WHERE requests.status = "pending" AND requests.deleted = false AND requests.recieverID = :userID;`,
+            WHERE requests.status = "pending" AND requests.deleted = false AND requests.recieverID = :userID AND requests.operation = "addToTeam";`,
             {
                 userID: userID
             }
@@ -191,7 +191,7 @@ app.get("/loadIncomingTeamRequest", async function (req, res) {
     }
 })
 
-app.post("/resolveIncomingTeamRequest", async function (req, res) { //remove add to team on the team management file or edit to communinicate redundancy
+app.post("/resolveIncomingTeamRequest", async function (req, res) {
     try {
         //Accept/Deny Check
         const acceptedCheck = req.body.accepted
@@ -250,7 +250,111 @@ app.post("/resolveIncomingTeamRequest", async function (req, res) { //remove add
     }
 })
 
-//Need Friends List Endpoints
+//Friends List Endpoints
+app.post("/createFriendRequest", async function (req, res) {
+    try {
+        const userID = await findUID(req.user, req)
+        let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
+        const targetID = await findTargetUID(req.body.targetEmail, req)
+
+        //duplicate checking
+        while (await UIDChecker(requestUID, req)) {
+            requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('')
+        }
+
+        await req.db.query(`
+        INSERT INTO requests (uid , senderID , recieverID , operation , status , deleted)
+        VALUES (:uid , :senderID , :recieverID , "addFriend" , "pending" , false);`,
+            {
+                uid: requestUID,
+                senderID: userID,
+                recieverID: targetID,
+            })
+
+        res.status(200).json({ success: true })
+    } catch (error) {
+        console.log(error);
+        res.status(500)
+    }
+})
+
+app.get("/loadIncomingFriendRequest", async function (req, res) {
+    try {
+        const userID = await findUID(req.user, req);
+
+        const [requestList] = await req.db.query(
+            `SELECT requests.uid , requests.timeCreated, users.username , users.email
+            FROM requests LEFT JOIN users on requests.SenderID = users.id
+            WHERE requests.status = "pending" AND requests.deleted = false AND requests.recieverID = :userID AND requests.operation = "addFriend";`,
+            {
+                userID: userID
+            }
+        )
+
+        res.status(200).json({ success: true, data: requestList })
+    } catch (error) {
+        console.log(error);
+        res.status(500)
+    }
+})
+
+app.post("/resolveIncomingFriendRequest", async function (req, res) {
+    try {
+        //Accept/Deny Check
+        const acceptedCheck = req.body.accepted
+
+        //Deny Resolve
+        if (!acceptedCheck) {
+            await req.db.query(
+                `UPDATE requests
+                SET status = "declined" , deleted = true , timeResolved = now()
+                WHERE uid = :requestUID AND deleted = false`,
+                {
+                    requestUID: req.body.requestUID
+                }
+            )
+            res.status(200).json({ success: true })
+            return
+        }
+
+        //Accept Resolve
+        else {
+            const [[reqDataRaw]] = await req.db.query(
+                `SELECT senderID , recieverID FROM requests WHERE uid = :requestUID`
+                ,
+                {
+                    requestUID : req.body.requestUID
+                }
+            );
+            
+            const senderID = reqDataRaw.senderID
+            const targetID = reqDataRaw.recieverID
+
+            await req.db.query(
+                `INSERT INTO usersLinks(userID1 , userID2 , deleted) 
+                VALUES(:sender , :reciever , false);`,
+                {
+                    sender : senderID,
+                    reciever : targetID
+                }
+            )
+            await req.db.query(
+                `UPDATE requests
+                SET status = "accepted" , deleted = true , timeResolved = now()
+                WHERE uid = :requestUID AND deleted = false`,
+                {
+                    requestUID: req.body.requestUID
+                }
+            )
+
+            res.status(200).json({ "success": true })
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500)
+    }
+})
+
 
 //Listener
 app.listen(port, () => console.log(`Server listening on http://localhost:${port}`));
