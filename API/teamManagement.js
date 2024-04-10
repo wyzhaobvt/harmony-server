@@ -11,66 +11,66 @@ const port = 1 + +process.env.SERVER_PORT;
 const app = express();
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
 });
 
 app.use(async function (req, res, next) {
-  try {
-    req.db = await pool.getConnection();
-    req.db.connection.config.namedPlaceholders = true;
+    try {
+        req.db = await pool.getConnection();
+        req.db.connection.config.namedPlaceholders = true;
 
-    await req.db.query(`SET SESSION sql_mode = "TRADITIONAL"`);
-    await req.db.query(`SET time_zone = '-8:00'`);
+        await req.db.query(`SET SESSION sql_mode = "TRADITIONAL"`);
+        await req.db.query(`SET time_zone = '-8:00'`);
 
-    await next();
+        await next();
 
-    req.db.release();
-  } catch (err) {
-    console.log(err);
+        req.db.release();
+    } catch (err) {
+        console.log(err);
 
-    if (req.db) req.db.release();
-    throw err;
-  }
+        if (req.db) req.db.release();
+        throw err;
+    }
 });
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(
-  cors({
-    origin: `http://localhost:${process.env.CLIENT_PORT}`,
-    credentials: true,
-  })
+    cors({
+        origin: `http://localhost:${process.env.CLIENT_PORT}`,
+        credentials: true,
+    })
 );
 
 app.use((req, res, next) => {
-  res.secureCookie = (name, val, options = {}) => {
-    res.cookie(name, val, {
-      sameSite: "strict",
-      httpOnly: true,
-      secure: true,
-      ...options,
-    });
-  };
-  next();
+    res.secureCookie = (name, val, options = {}) => {
+        res.cookie(name, val, {
+            sameSite: "strict",
+            httpOnly: true,
+            secure: true,
+            ...options,
+        });
+    };
+    next();
 });
 
 function authenticateToken(req, res, next) {
-  const token = req.cookies.token;
-  if (token == null) {
-    return res.sendStatus(401);
-  }
-
-  jwt.verify(token, process.env.JWT_KEY, (err, user) => {
-    if (err) {
-      console.log(err);
-      return res.sendStatus(403);
+    const token = req.cookies.token;
+    if (token == null) {
+        return res.sendStatus(401);
     }
-    req.user = user;
-    next();
-  });
+
+    jwt.verify(token, process.env.JWT_KEY, (err, user) => {
+        if (err) {
+            console.log(err);
+            return res.sendStatus(403);
+        }
+        req.user = user;
+        next();
+    });
 }
 
 app.use(authenticateToken);
@@ -82,7 +82,7 @@ app.post("/createTeam", async function (req, res) {
     try {
         const UID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('');
         const UserID = await findUID(req.user, req);
-        const linkedName = req.body.teamName.toLowerCase().replaceAll(" " , "-")
+        const linkedName = req.body.teamName.toLowerCase().replaceAll(" ", "-")
 
         //Optional: Create a duplicate uid prevention function
 
@@ -133,15 +133,15 @@ app.get("/loadJoinedTeams", async function (req, res) {
     try {
 
         const userID = await findUID(req.user, req);
-        
+
         //get all owned teams
         const [ownedTeamsArr] = await req.db.query(
             `SELECT uid , name , teamCallLink FROM teams WHERE OwnerID = :ownerID AND deleted = false`,
             {
-                ownerID : userID
+                ownerID: userID
             }
         );
-        
+
         ownedTeamsArr.forEach(element => {
             element.owned = true
         });
@@ -150,17 +150,17 @@ app.get("/loadJoinedTeams", async function (req, res) {
         const [joinedTeamsArr] = await req.db.query(
             ` SELECT teams.name , teams.uid , teams.teamCallLink from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = :addUser and teamslinks.deleted = false`,
             {
-                addUser : userID
+                addUser: userID
             }
         );
-        
+
         joinedTeamsArr.forEach(element => {
             element.owned = false
         });
 
         //append teams together
-        const teamList = [...ownedTeamsArr , ...joinedTeamsArr]
-        
+        const teamList = [...ownedTeamsArr, ...joinedTeamsArr]
+
         res.status(200).json({ "success": true, "data": teamList })
     } catch (error) {
         console.log(error);
@@ -285,8 +285,40 @@ app.post("/deleteTeam", async function (req, res) {
                 teamID: teamID
             }
         )
-        
+
         res.status(200).json({ "success": true })
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("An error has occurred");
+    }
+})
+
+app.post("/loadTeamMemberList", async function (req, res) {
+    try {
+        const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req)
+
+        const [membersList] = await req.db.query(
+            `SELECT users.username , users.email FROM teamslinks LEFT JOIN users ON teamslinks.addUser = users.id WHERE teamslinks.teamID = :teamID AND teamslinks.deleted = false`
+            ,
+            {
+                teamID : teamID
+            }
+        );
+
+        const [ownerList] = await req.db.query(
+            `SELECT users.username , users.email FROM teams LEFT JOIN users ON teams.ownerID = users.id WHERE teams.id = :teamID and users.deleted = false`
+            ,
+            {
+                teamID : teamID
+            }
+        );
+
+        const membersListFinal = membersList.map((entry) => {return {...entry, owner : false}});
+        const ownerListFinal = ownerList.map((entry) => {return {...entry, owner : true}});
+        const finalList = [...membersListFinal , ...ownerListFinal];
+
+
+        res.status(200).json({ "success": true , "data" : finalList})
     } catch (error) {
         console.log(error);
         res.status(500).send("An error has occurred");
@@ -349,5 +381,5 @@ async function verifyTeamOwner(teamUID, userID, req) {
 //Listener
 
 app.listen(port, () =>
-  console.log(`Server listening on http://localhost:${port}`)
+    console.log(`Server listening on http://localhost:${port}`)
 );

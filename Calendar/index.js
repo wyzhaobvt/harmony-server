@@ -3,6 +3,7 @@ const path = require('path');
 const process = require('process');
 const {authenticate} = require('@google-cloud/local-auth');
 const {google} = require('googleapis');
+const { log } = require('console');
 
 const TOKEN_PATH = path.join(process.cwd(), './Calendar/token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), './Calendar/credentials.json');
@@ -107,6 +108,21 @@ async function listCalendars() {
     }));
     return simplifiedCalendars;
 }
+// Create new calendar for new group.
+async function createCalendar(groupName) {
+  const auth = await authorize(); // Assuming `authorize()` returns the authenticated client
+  const calendar = google.calendar({ version: 'v3', auth });
+  try {
+    const calendarRes = await calendar.calendars.insert({
+      requestBody: {
+        summary: groupName,
+      },
+    });
+    console.log('New calendar created:', calendarRes.data.summary);
+  } catch (err) {
+    console.error('Error creating calendar:', err);
+  }
+}
 // Lists upcoming events on the selected calendar.
 async function listEvents(calendarName) {
   const calendarIdObject = await getCalendarIdByName(calendarName);
@@ -138,8 +154,52 @@ async function listEvents(calendarName) {
   });
   return upcomingEvents;
 }
+
+// Lists upcoming events on the selected calendar by date.
+async function listEventsByDate(calendarName, date) {
+  const calendarIdObject = await getCalendarIdByName(calendarName);
+  const calendarId = calendarIdObject.id;
+  const auth = await authorize(); // Assuming `authorize()` returns the authenticated client
+  const calendar = google.calendar({ version: 'v3', auth });
+  const res = await calendar.events.list({
+      calendarId: calendarId,
+      timeMin: `${date}T00:00:00-07:00`,
+      timeMax: `${date}T23:59:59-07:00`,
+      maxResults: 100,
+      singleEvents: true,
+      orderBy: 'startTime',
+  });
+
+  const events = res.data.items;
+  const upcomingEvents = [];
+
+  if (!events || events.length === 0) {
+      return { error: 'No upcoming events found.' };
+  }
+
+  events.forEach((event, i) => {
+    const start = event.start.dateTime || event.start.date;
+    upcomingEvents.push({
+        name: event.summary,
+        date: start,
+        description: event.description || ''
+    });
+  });
+  return upcomingEvents;
+}
 // Creates event on the selected calendar.
 async function createEvent(calendarName, event) {
+    const processedEvent = {
+      
+        'summary': event.name,
+        'description': event.description,
+        'start': {
+          'dateTime': `${event.date.slice(0,10)}T${event.startTime}:00-07:00`,
+        },
+        'end': {
+          'dateTime': `${event.date.slice(0,10)}T${event.endTime}:00-07:00`,
+        },
+    }
     const auth = await authorize();
     const calendarIdObject = await getCalendarIdByName(calendarName)
     const calendarId = calendarIdObject.id;
@@ -148,9 +208,10 @@ async function createEvent(calendarName, event) {
         calendar.events.insert({
             auth: auth,
             calendarId: calendarId,
-            resource: event,
-            }, function(err, event) {
+            resource: processedEvent,
+            }, function(err, processedEvent) {
             if (err) {
+                console.log(err.message);
                 throw new Error('err')
             }
             });
@@ -195,9 +256,11 @@ module.exports = {
     saveCredentials,
     authorize,
     listCalendars,
+    createCalendar,
     getCalendarIdByName,
     getEventIdByName,
     listEvents,
+    listEventsByDate,
     createEvent,
     editEvent,
     deleteEvent

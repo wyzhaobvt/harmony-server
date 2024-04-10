@@ -4,11 +4,14 @@ const jwt = require("jsonwebtoken");
 const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
+const cloudinary = require('../cloudinary/cloudinary')
 require("dotenv").config();
 
 const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
+
+app.use(express.json({ limit: "50mb" }))
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -63,17 +66,12 @@ app.post("/registerUser",
     async function (req, res) {
         try {
             // Duplicate Email Check
-            const dupeCheckEmail = req.body.email;
-
-            const [testDupes] = await req.db.query(
-                `SELECT * FROM users WHERE email = :dupeCheckEmail AND deleted = 0;`, {
-                dupeCheckEmail,
-            })
-
-            if (testDupes.length) {
-                res.status(409).json({ "success": false, "message": "Email already in use" });
-                return
-            }
+            const dupeEmail = await isDupeEmail(req.body.email, req);
+            
+            if (dupeEmail) {
+              res.status(409).json({ success: false, message: "Email already in use" });
+              return;
+            }      
 
             // Password Encryption
             const hashPW = await bcrypt.hash(req.body.password, 10);
@@ -85,16 +83,17 @@ app.post("/registerUser",
             const calllink = `${hashedLinkHead}/${linkUID}`
 
             // Inserting new user into db
-            await req.db.query('INSERT INTO users (email, password, username , userCallLink , profileURL , deleted) VALUES (:email, :password, :email , :calllink , "" , false)', {
+            await req.db.query('INSERT INTO users (email, password, username , userCallLink , profileURL , deleted) VALUES (:email, :password, :username , :calllink , "" , false)', {
                 email: user.email,
                 password: user.securePassword,
+                username: req.body.username,
                 calllink: calllink
             });
 
             const accessToken = jwt.sign(user, process.env.JWT_KEY);
 
             res.secureCookie("token", accessToken);
-
+            
             res.status(201).json({ "success": true })
         } catch (error) {
             console.log(error);
@@ -128,6 +127,19 @@ app.post("/loginUser",
             console.log(error);
             res.status(500).send("An error has occurred");
         }
+    }
+);
+
+//Logout User
+app.post("/logoutUser",
+    async function (req, res) {
+      try {
+        res.clearCookie("token");
+        res.status(200).json({ success: true });
+      } catch (error) {
+        console.log(error);
+        res.status(500).send("An error has occurred");
+      }
     }
 );
 
@@ -189,27 +201,48 @@ app.post("/deleteUser",
     }
 );
 
-//Update Username
-app.post("/updateUsername",
-    async function (req, res) {
-        try {
-            await req.db.query(`
-            UPDATE users
-            SET username = :username
-            WHERE email = :email
-            `,
-                {
-                    email : req.user.email,
-                    username : req.body.newUsername
-                }
-            );
-            res.status(200).json({ "success": true })
-        } catch (error) {
-            console.log(error);
-            res.status(500).send("An error has occurred");
-        }
+// Update User
+app.post("/updateUser", async function (req, res) {
+  try {
+    const { username, email } = req.body;
+    const userId = await findUID(req.user, req);
+
+    // Duplicate Email Check
+    if (email !== req.user.email) {
+      const dupeEmail = await isDupeEmail(email, req);
+
+      if (dupeEmail) {
+        res.status(409).json({ success: false, message: "Email already in use" });
+        return;
+      }
     }
-);
+
+    await req.db.query(
+      `
+        UPDATE users
+        SET username = :username, email = :email
+        WHERE id = :userId
+      `,
+      {
+        userId,
+        username,
+        email
+      }
+    );
+
+    // Find User in DB
+    const [[user]] = await req.db.query('SELECT * FROM users WHERE email = :email AND deleted = 0', { email });
+    
+    // Update cookie to reflect new email change
+    const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
+    res.secureCookie("token", accessToken);
+
+    res.status(200).json({ success: true, message: "Profile has been updated successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("An error has occurred");
+  }
+});
 
 // Verify Peer Connection
 app.get("/peer/authenticate", express.json(), async (req, res) => {
@@ -222,16 +255,26 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
       }
     );
     const userID = queriedUser.id;
-    const [teamList] = await req.db.query(
-      `SELECT teams.uid, teams.name
-      FROM teams
-      JOIN teamslinks ON teams.id = teamslinks.teamID
-      JOIN users ON teamslinks.addUser = users.id
-      WHERE users.id = :userID OR teams.ownerID = :userID;`, //redo query to filter out deleted. current issue "deleted column is ambiguous"
+
+    //get all owned teams
+    const [ownedTeamsArr] = await req.db.query(
+      `SELECT uid FROM teams WHERE OwnerID = :ownerID AND deleted = false`,
       {
-        userID: userID,
+        ownerID: userID,
       }
     );
+
+    //get all joined teams
+    const [joinedTeamsArr] = await req.db.query(
+      ` SELECT teams.uid from teamslinks left join teams on teamslinks.teamID = teams.ID WHERE teamslinks.addUser = :addUser and teamslinks.deleted = false`,
+      {
+        addUser: userID,
+      }
+    );
+
+    //append teams together
+    const teamList = [...ownedTeamsArr, ...joinedTeamsArr];
+
     const token = jwt.sign(
       {
         uid: req.user.email,
@@ -241,6 +284,7 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
       process.env.SIGNALING_KEY,
       { expiresIn: 1 }
     );
+    
     res
       .status(200)
       .json({ success: true, message: "peer authorized", data: token });
@@ -250,27 +294,126 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
   }
 });
 
-//Update Profile Picture
-app.post("/updatePFP",
-    async function (req, res) {
-        try {
-            await req.db.query(`
-            UPDATE users
-            SET profileURL = :newPFP
-            WHERE email = :email
-            `,
-                {
-                    email : req.user.email,
-                    newPFP : req.body.newPFP
-                }
-            );
-            res.status(200).json({ "success": true })
-        } catch (error) {
-            console.log(error);
-            res.status(500).send("An error has occurred");
-        }
+// Upload or update user avatar
+app.post("/uploadAvatar", async (req, res) => {
+  try {
+    const { image, avatarLink } = req.body;
+    const userId = await findUID(req.user, req);
+
+    uploadOptions = {
+      upload_preset: "unsigned_upload",
+      allowed_formats: ["png", "jpg", "jpeg", "svg", "ico", "jfif", "webp"],
+    };
+
+    // Add public ID to 'uploadOptions' if 'avatarLink' exists
+    if (avatarLink) {
+      // Find the index of the substring 'user-avatar/'
+      const startIndex =
+        avatarLink.indexOf("user-avatar/") + "user-avatar/".length;
+
+      // Find the index of the end of the substring before the file extension
+      const endIndex = avatarLink.lastIndexOf(".");
+
+      // Extract id from 'avatarLink'
+      const publicId = avatarLink.substring(startIndex, endIndex);
+
+      uploadOptions.public_id = publicId;
     }
-);
+
+    // Upload image to cloudinary
+    const uploadedImage = await cloudinary.uploader.upload(
+      image,
+      uploadOptions,
+      function (error, result) {
+        if (error) {
+          console.log(error);
+        }
+        console.log(result);
+      }
+    );
+
+    // Store avatar URL to database
+    await req.db.query(
+      `
+        UPDATE users
+        SET profileURL = :newPFP
+        WHERE id = :userId
+        `,
+      {
+        userId,
+        newPFP: uploadedImage.secure_url,
+      }
+    );
+
+    console.log(uploadedImage);
+    res.status(200).json({ success: true, data: uploadedImage });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("An error has occurred");
+  }
+});
+
+// Delete user avatar
+app.delete("/deleteAvatar", async (req, res) => {
+  try {
+    const { avatarLink } = req.body;
+    const userId = await findUID(req.user, req);
+    
+    if (avatarLink) {
+      // Find the index of the substring 'user-avatar/'
+      const startIndex = avatarLink.indexOf("user-avatar/");
+
+      // Find the index of the end of the substring before the file extension
+      const endIndex = avatarLink.lastIndexOf(".");
+
+      // Extract public id from 'avatarLink'
+      const publicId = avatarLink.substring(startIndex, endIndex);
+
+      // Delete image from Cloudinary
+      cloudinary.uploader.destroy(publicId, { invalidate: true });
+
+      // Delete image link from database
+      await req.db.query(
+        `
+          UPDATE users
+          SET profileURL = ""
+          WHERE id = :userId
+        `,
+        {
+          userId
+        }
+      );  
+    }
+
+    res.status(200).json({ success: true, message: "Avatar deleted" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("An error has occurred");
+  }
+});
+
+// Get user data
+app.get("/getUser", async (req, res) => {
+  try {
+    const userId = await findUID(req.user, req);
+
+    const userData = await req.db.query(
+      `
+        SELECT email, username, profileURL
+        FROM users
+        WHERE id = :userId
+      `,
+      {
+        userId
+      }
+    );
+
+    res.status(200).json({ success: true, data: userData[0] });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("An error has occurred");
+  }
+});
 
 //Functions
 function validatePassword(password) {
@@ -292,6 +435,22 @@ async function findUID(userObj, req) {
         }
     );
     return queriedUser.id
+}
+
+// Check for duplicate email
+async function isDupeEmail(dupeCheckEmail, req) {
+  const [testDupes] = await req.db.query(
+    `SELECT * FROM users WHERE email = :dupeCheckEmail AND deleted = 0;`,
+    {
+      dupeCheckEmail,
+    }
+  );
+
+  if (testDupes.length) {
+    return true;
+  }
+
+  return false;
 }
 
 //Listener
