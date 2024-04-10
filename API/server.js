@@ -11,6 +11,7 @@ const calendarRoutes = require('../Calendar/calendarRoutes');
 const peerServer = require("../Peer/signaling.cjs")
 const updateServer = require("../Peer/updates.cjs")
 const socketAuth = require("../Peer/socketAuth.cjs")
+const {setup: socketSetup, sockets} = require("../Peer/sockets.cjs")
 
 const port = process.env.SERVER_PORT;
 
@@ -18,7 +19,6 @@ const app = express();
 
 const server = http.createServer(app)
 const socketIo = require("socket.io");
-const { group } = require("console");
 
 const io = new socketIo.Server(server, {
   cors: {
@@ -36,55 +36,7 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
 });
 
-io.use((socket,next)=>{
-  socket.handshake.cookies = Object.fromEntries(socket.handshake.headers.cookie.split("; ").map(a=>a.split("=")))
-  const token = socket.handshake.cookies.token
-  if (token == null) {
-    return next(new Error("Invalid Token"));
-  }
-
-  jwt.verify(token, process.env.JWT_KEY, (err, user) => {
-    if (err) {
-      console.log(err);
-      return next(new Error("Invalid Token"));
-    }
-    socket.data.user = {username: "my_username", groups: [], uid: "myuid", ...user}
-    next();
-  });
-})
-
-io.use(async (socket, next)=>{
-  socket.data.db = function(sql, values) {
-    return new Promise(async (resolve, reject)=>{
-      let db = null
-      try {
-        db = await pool.getConnection();
-        db.connection.config.namedPlaceholders = true;
-    
-        await db.query(`SET SESSION sql_mode = "TRADITIONAL"`);
-        await db.query(`SET time_zone = '-8:00'`);
-  
-        const queriedData = await db.query(sql, values)
-    
-        db.release();
-        resolve(queriedData)
-      } catch (err) {
-        console.log(err);
-        if (db) db.release();
-        reject(err)
-        throw err;
-      }
-    })
-  }
-  next()
-})
-
-// io.use(socketAuth(process.env.SIGNALING_KEY))
-
-peerServer(io)
-
-updateServer(io)
-
+socketSetup({io, pool})
 
 app.use(async function (req, res, next) {
   try {
