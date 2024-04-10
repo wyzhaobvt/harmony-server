@@ -56,6 +56,24 @@ app.use((req, res, next) => {
     next();
 });
 
+function authenticateToken(req, res, next) {
+    const token = req.cookies.token;
+    if (token == null) {
+      return res.sendStatus(401);
+    }
+  
+    jwt.verify(token, process.env.JWT_KEY, (err, user) => {
+      if (err) {
+        console.log(err);
+        return res.sendStatus(403);
+      }
+      req.user = user;
+      next();
+    });
+  }
+  
+  app.use(authenticateToken);
+
 //functions
 //retrieves users id from the stored cookie
 async function findUID(userObj, req) {
@@ -112,14 +130,14 @@ async function verifyTeamOwner(teamUID, userID, req) {
 
 //endpoints
 //load friends list / user 1 is the sender and user 2 is the reciever
-app.post("/loadFriendsList", async function (req, res) {
+app.get("/loadFriendsList", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
 
         const [recievedList] = await req.db.query(`
         SELECT users.username , users.email 
         FROM usersLinks LEFT JOIN users ON userslinks.userID2 = users.id
-        WHERE userID1 = :userID and deleted = false`,
+        WHERE userID1 = :userID and usersLinks.deleted = false`,
             {
                 userID: userID
             })
@@ -127,7 +145,7 @@ app.post("/loadFriendsList", async function (req, res) {
         const [sentList] = await req.db.query(`
             SELECT users.username , users.email 
             FROM usersLinks LEFT JOIN users ON userslinks.userID1 = users.id
-            WHERE userID2 = :userID and deleted = false`,
+            WHERE userID2 = :userID and usersLinks.deleted = false`,
             {
                 userID: userID
             })
@@ -145,10 +163,10 @@ app.post("/loadFriendsList", async function (req, res) {
 app.post("/removeFriend", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
-        const targetID = await findTargetUID(req.targetEmail, req);
+        const targetID = await findTargetUID(req.body.targetEmail, req);
 
         await req.db.query(
-            `UPDATE userslink
+            `UPDATE userslinks
             SET deleted = true
             WHERE userID1 = :userID AND userID2 = :targetID AND deleted = false`,
             {
@@ -158,7 +176,7 @@ app.post("/removeFriend", async function (req, res) {
         )
 
         await req.db.query(
-            `UPDATE userslink
+            `UPDATE userslinks
             SET deleted = true
             WHERE userID2 = :userID AND userID1 = :targetID AND deleted = false`,
             {
@@ -167,7 +185,7 @@ app.post("/removeFriend", async function (req, res) {
             }
         )
 
-        res.status(200).json({ "success": true, "data": exportData })
+        res.status(200).json({ "success": true})
     } catch (error) {
         console.log(error);
         res.status(500).send("An error has occurred");
