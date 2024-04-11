@@ -3,7 +3,6 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const e = require('express');
 
 //need to add a remove chat directory for when chats get deleted
 // need to use function for GET User id or GET team id
