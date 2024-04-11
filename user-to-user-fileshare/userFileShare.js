@@ -27,7 +27,9 @@ const storage = multer.diskStorage({
         cb(null, req.serverUploadPath);
     },
     filename: function (req, file, cb) { 
-        cb(null, file.originalname);
+        let cleanName = file.originalname.split('.')
+        const uniqueSuffix = Date.now();
+        cb(null, cleanName[0]+ '-'+ uniqueSuffix + '.' + cleanName[1] );
     }
 });
 const upload = multer({ storage: storage });
@@ -38,16 +40,6 @@ const upload = multer({ storage: storage });
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), (req, res) => {
     try{
-        let chatDir = fs.readdirSync(`${uploadDir}/${req.params.chatId}`);
-        let fileName = req.file.originalname;
-        let cleanName = cleanFileName(fileName);
-        
-        console.log(chatDir, fileName, typeof cleanName[0], cleanName[0])
-        if(chatDir.includes(cleanName[0])){
-            console.log("it's here")
-        }else{
-            console.log("it's not here")
-        }
         return res.json({ 'filename': req.file.originalname, 'data': req.file });
     } catch(err) { 
         console.error(err);
@@ -92,9 +84,9 @@ router.post('/:chatId/:fileName', async (req, res) => {
         fs.copyFileSync(sourcePath, destPath)
 
     }else if(fileCopiesArray.length >= 2){
-        latestCopy = cleanFileName(fileCopiesArray[0]);
+        latestCopy = cleanFileName(fileCopiesArray[1]);
         fileCopyValue = Number(latestCopy[1]) + 1;
-        
+
         if(cleanName.length === 2){
         //if you click on root file that already has copies
             destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[1]}`;
