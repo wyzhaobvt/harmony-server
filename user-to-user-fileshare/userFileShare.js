@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const e = require('express');
 
 //need to add a remove chat directory for when chats get deleted
 // need to use function for GET User id or GET team id
@@ -37,6 +38,16 @@ const upload = multer({ storage: storage });
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), (req, res) => {
     try{
+        let chatDir = fs.readdirSync(`${uploadDir}/${req.params.chatId}`);
+        let fileName = req.file.originalname;
+        let cleanName = cleanFileName(fileName);
+        
+        console.log(chatDir, fileName, typeof cleanName[0], cleanName[0])
+        if(chatDir.includes(cleanName[0])){
+            console.log("it's here")
+        }else{
+            console.log("it's not here")
+        }
         return res.json({ 'filename': req.file.originalname, 'data': req.file });
     } catch(err) { 
         console.error(err);
@@ -62,20 +73,33 @@ router.post('/:chatId/:fileName', async (req, res) => {
     let chatDir = fs.readdirSync(`${uploadDir}/${chatId}`);
     //finds amount of file copies in directory
     let fileCopiesArray = chatDir.filter(file => file.match(cleanName[0]));  
-    fileCopiesArray.reverse()  
+    fileCopiesArray.sort((a, b) =>
+    a.localeCompare(b, "en-US", { numeric: true, ignorePunctuation: true })
+    ).reverse();
     let latestCopy;
     let fileCopyValue;
-    if(fileCopiesArray.length === 1 ){
+
+    if(fileCopiesArray.length === 1){
         //if you click on a root file with no copies
-        destPath = `${uploadDir}/${chatId}/${cleanName[0]}(1).${cleanName[1]}`;
-        fs.copyFileSync(sourcePath, destPath)
-    }else if(fileCopiesArray.length >= 2){
-        //if you click on root file that already has copies
-        latestCopy = cleanFileName(fileCopiesArray[1]);
-        fileCopyValue = Number(latestCopy[1]) + 1;
         if(cleanName.length === 2){
+            //if it has no copy number
+                destPath = `${uploadDir}/${chatId}/${cleanName[0]}(1).${cleanName[1]}`;
+            } else {
+            //if it has a copy number
+                fileCopyValue = Number(cleanName[1]) + 1;
+                destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[3]}`;
+        }
+        fs.copyFileSync(sourcePath, destPath)
+
+    }else if(fileCopiesArray.length >= 2){
+        latestCopy = cleanFileName(fileCopiesArray[0]);
+        fileCopyValue = Number(latestCopy[1]) + 1;
+        
+        if(cleanName.length === 2){
+        //if you click on root file that already has copies
             destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[1]}`;
         } else {
+        //if you click on a copy
             destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[3]}`;
         }
         fs.copyFileSync(sourcePath, destPath)
