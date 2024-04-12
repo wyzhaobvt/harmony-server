@@ -43,6 +43,9 @@ function setup({ io, pool }) {
   });
 
   io.use((socket, next) => {
+    if (!socket.handshake.headers.cookie) {
+      return next(new Error("Invalid Token"))
+    }
     socket.handshake.cookies = Object.fromEntries(
       socket.handshake.headers.cookie.split("; ").map((a) => a.split("="))
     );

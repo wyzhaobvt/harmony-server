@@ -99,6 +99,10 @@ router.post("/edit", async (req, res) => {
       }
     );
 
+    req.socket.to("online:" + teamUID).emit("update:edited_message", {
+      team: teamUID,
+    });
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: "An error has occurred" });
@@ -132,6 +136,10 @@ router.delete("/delete", async (req, res) => {
         teamId,
       }
     );
+
+    req.socket.to("online:" + teamUID).emit("update:deleted_message", {
+      team: teamUID,
+    });
 
     res.json({ success: true });
   } catch (error) {
