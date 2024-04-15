@@ -6,7 +6,7 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
 
-const port = 2 + +process.env.SERVER_PORT;
+const port = 4 + +process.env.SERVER_PORT;
 
 const app = express();
 
@@ -134,8 +134,8 @@ app.get("/loadFriendsList", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
 
-        const [recievedList] = await req.db.query(`
-        SELECT users.username , users.email 
+        const [receivedList] = await req.db.query(`
+        SELECT users.username, users.email, users.profileURL 
         FROM usersLinks LEFT JOIN users ON userslinks.userID2 = users.id
         WHERE userID1 = :userID and usersLinks.deleted = false`,
             {
@@ -143,14 +143,14 @@ app.get("/loadFriendsList", async function (req, res) {
             })
 
         const [sentList] = await req.db.query(`
-            SELECT users.username , users.email 
+            SELECT users.username, users.email, users.profileURL 
             FROM usersLinks LEFT JOIN users ON userslinks.userID1 = users.id
             WHERE userID2 = :userID and usersLinks.deleted = false`,
             {
                 userID: userID
             })
 
-        const exportData = [...recievedList, ...sentList]
+        const exportData = [...receivedList, ...sentList]
 
         res.status(200).json({ "success": true, "data": exportData })
     } catch (error) {
