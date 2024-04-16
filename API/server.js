@@ -8,10 +8,8 @@ const path = require("path");
 require("dotenv").config();
 const chatRoutes = require("../Chat/routes");
 const calendarRoutes = require('../Calendar/calendarRoutes');
-const peerServer = require("../Peer/signaling.cjs")
-const updateServer = require("../Peer/updates.cjs")
-const socketAuth = require("../Peer/socketAuth.cjs")
-const {setup: socketSetup, sockets} = require("../Peer/sockets.cjs")
+const fileRoutes = require("../user-to-user-fileshare/userFileShare")
+const {setup: socketSetup} = require("../Peer/sockets.cjs")
 
 const port = process.env.SERVER_PORT;
 
@@ -100,6 +98,8 @@ app.use(authenticateToken);
 app.use(express.static(path.join(__dirname, "../dist")));
 
 app.use("/api/chat", chatRoutes);
+
+app.use("/files", fileRoutes)
 
 app.get("/server/status", (req, res) => {
   res.send("Server is functioning properly.");

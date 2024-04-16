@@ -176,7 +176,7 @@ app.get("/loadIncomingTeamRequest", async function (req, res) {
         const userID = await findUID(req.user, req);
 
         const [requestList] = await req.db.query(
-            `SELECT requests.uid , requests.timeCreated, users.username , users.email
+            `SELECT requests.uid , requests.timeCreated, users.username , users.email, requests.data AS team
             FROM requests LEFT JOIN users on requests.SenderID = users.id
             WHERE requests.status = "pending" AND requests.deleted = false AND requests.recieverID = :userID AND requests.operation = "addToTeam";`,
             {
@@ -283,7 +283,7 @@ app.get("/loadIncomingFriendRequest", async function (req, res) {
         const userID = await findUID(req.user, req);
 
         const [requestList] = await req.db.query(
-            `SELECT requests.uid , requests.timeCreated, users.username , users.email
+            `SELECT requests.uid , requests.timeCreated, users.username , users.email, users.profileURL
             FROM requests LEFT JOIN users on requests.SenderID = users.id
             WHERE requests.status = "pending" AND requests.deleted = false AND requests.recieverID = :userID AND requests.operation = "addFriend";`,
             {
