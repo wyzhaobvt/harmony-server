@@ -65,11 +65,11 @@ router.post('/rename/:chatId/:fileName', (req, res) => {
     
     if(chatDir.includes(`${newFileName}.${fileType}`)){
        return res.json({"success": false, "status": 400, "message": `${newFileName} exists`});
-    }  
+    }   
     
     fs.rename(oldFilePath, newFilePath, (err) => {
         if (err) throw err;
-        return res.json({"success": true, "status": 200, newFileName});
+        return res.json({"success": true, "status": 200, newFileName, "message": `File name changed to ${newFileName}`});
     });
 })
 
