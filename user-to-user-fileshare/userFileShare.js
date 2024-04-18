@@ -51,7 +51,27 @@ router.get('/download/:chatId/:fileName', async (req, res) => {
     const {chatId, fileName} = req.params;
     const filePath = `${uploadDir}/${chatId}/${fileName}`;
     res.download(filePath, 'downloadMe',(err) => {if(err) console.error(err)});
-});
+}); 
+
+//file rename route
+router.post('/rename/:chatId/:fileName', (req, res) => {
+    const {chatId, fileName} = req.params;
+    const newFileName = req.body.newFileName;
+    const fileType = fileName.split('.')[1];
+    
+    const oldFilePath = `${uploadDir}/${chatId}/${fileName}`;
+    const newFilePath = `${uploadDir}/${chatId}/${newFileName}.${fileType}`;
+    let chatDir = fs.readdirSync(`${uploadDir}/${chatId}`);
+    
+    if(chatDir.includes(`${newFileName}.${fileType}`)){
+       return res.json({"success": false, "status": 400, "message": `${newFileName} exists`});
+    }   
+    
+    fs.rename(oldFilePath, newFilePath, (err) => {
+        if (err) throw err;
+        return res.json({"success": true, "status": 200, newFileName, "message": `File name changed to ${newFileName}`});
+    });
+})
 
 //file duplicate route
 router.post('/:chatId/:fileName', async (req, res) => {
