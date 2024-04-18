@@ -198,14 +198,3 @@ async function findUID(userObj, req) {
   );
   return queriedUser.id
 }
-//finds team id from uid
-async function findTeamID(teamUID, teamName, req) {
-  const [[queriedTeam]] = await req.db.query(
-      `SELECT * FROM teams WHERE uid = :uid and name = :teamName`,
-      {
-          uid: teamUID,
-          teamName: teamName
-      }
-  );
-  return queriedTeam.id
-}
