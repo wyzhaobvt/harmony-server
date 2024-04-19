@@ -39,6 +39,12 @@ const upload = multer({ storage: storage });
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), (req, res) => {
     try{
+      const {chatId} = req.params
+      req.socket.to("online:" + chatId).emit("update:file_added", {
+        team: chatId,
+        filename: req.file.originalname,
+        user: req.user.username
+      });
         return res.json({ 'filename': req.file.originalname, 'data': req.file });
     } catch(err) { 
         console.error(err);
@@ -95,16 +101,29 @@ router.post('/:chatId/:fileName', async (req, res) => {
         }
         fs.copyFileSync(sourcePath, destPath)
     }
+
+    req.socket.to("online:" + chatId).emit("update:file_added", {
+      team: chatId,
+      filename: fileName,
+      user: req.user.username
+    });
+
     return res.json({'status': 200, 'message': 'Copy success', 'file': fileName})
 })
 
 //file delete route
 router.delete('/:chatId?/:fileName', (req, res) => {
     try{
-        let {chatId, fileName} = req.params;
-        let filePath = `${uploadDir}/${chatId}/${fileName}`;
+        const {chatId, fileName} = req.params;
+        const filePath = `${uploadDir}/${chatId}/${fileName}`;
         
         fs.unlinkSync(filePath);
+
+        req.socket.to("online:" + chatId).emit("update:file_removed", {
+          team: chatId,
+          filename: fileName,
+          user: req.user.username
+        });
         return res.json({'message': 'success', 'status': 200})
 
     } catch(err) {

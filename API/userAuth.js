@@ -75,7 +75,7 @@ app.post("/registerUser",
 
             // Password Encryption
             const hashPW = await bcrypt.hash(req.body.password, 10);
-            const user = { "email": req.body.email, "securePassword": hashPW };
+            const user = { "email": req.body.email, "username": req.body.username, "securePassword": hashPW };
 
             //Create a personal call link/key
             const linkUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('')
@@ -118,7 +118,7 @@ app.post("/loginUser",
                 return;
             }
 
-            const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
+            const accessToken = jwt.sign({ "email": user.email, "username": req.body.username, "securePassword": user.password }, process.env.JWT_KEY);
 
             res.secureCookie("token", accessToken)
 
@@ -234,7 +234,7 @@ app.post("/updateUser", async function (req, res) {
     const [[user]] = await req.db.query('SELECT * FROM users WHERE email = :email AND deleted = 0', { email });
     
     // Update cookie to reflect new email change
-    const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
+    const accessToken = jwt.sign({ "email": user.email, "username": username, "securePassword": user.password }, process.env.JWT_KEY);
     res.secureCookie("token", accessToken);
 
     res.status(200).json({ success: true, message: "Profile has been updated successfully" });
