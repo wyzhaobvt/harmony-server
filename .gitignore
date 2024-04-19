@@ -27,5 +27,4 @@ dist-ssr
 .env
 Calendar/credentials.json
 Calendar/token.json
-
 uploads/*
