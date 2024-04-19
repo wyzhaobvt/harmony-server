@@ -1,12 +1,5 @@
 /**
- * @typedef {import("socket.io").Server} SocketIoServer
- * @typedef {import("socket.io").Socket} SocketIoSocket
- * @typedef {{socket: SocketIoSocket, currentRoom: string | null}} UserData
- * @typedef {{groups: string[], username: string, uid: string}} SocketUserData
- */
-
-/**
- * @param {SocketIoServer} io
+ * @param {import("socket.io").Server} io
  */
 function updates(io, sockets, uidMap) {
   io.on("connection", (socket) => {

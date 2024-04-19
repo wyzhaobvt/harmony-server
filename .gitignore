@@ -28,4 +28,4 @@ dist-ssr
 Calendar/credentials.json
 Calendar/token.json
 
-uploads
+uploads/*
