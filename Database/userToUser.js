@@ -5,6 +5,7 @@ const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
+const router = express.Router()
 
 const port = 4 + +process.env.SERVER_PORT;
 
@@ -193,7 +194,5 @@ app.post("/removeFriend", async function (req, res) {
 })
 
 
-//listener
-app.listen(port, () =>
-    console.log(`Server listening on http://localhost:${port}`)
-);
+//router
+module.exports = router
