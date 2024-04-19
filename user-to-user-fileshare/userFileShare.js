@@ -9,10 +9,50 @@ const fs = require('fs');
 // Set up multer for file uploads
 //define destination and filename convention
 const uploadDir = path.join(__dirname, '../uploads')
+
+router.use("*", async (req, res, next) => {
+  const [, , teamUid] = req.params[0].split("/");
+  try {
+    const userID = await findUID(req.user, req);
+
+    //check if user owns team
+    const [[{ owns }]] = await req.db.query(
+      `SELECT COUNT(*) AS owns
+        FROM teams
+        WHERE uid = :uid
+        AND ownerID = :ownerID AND deleted = false;`,
+      {
+        uid: teamUid,
+        ownerID: userID,
+      }
+    );
+
+    //check if user has joined team
+    const [[{ joined }]] = await req.db.query(
+      `SELECT COUNT(*) AS joined FROM teamslinks
+        LEFT JOIN teams on teamslinks.teamID = teams.ID
+        WHERE teamslinks.addUser = :addUser AND teams.uid = :uid AND teamslinks.deleted = false;`,
+      {
+        uid: teamUid,
+        addUser: userID,
+      }
+    );
+
+    // send unauthorized if they are neither the owner nor member of the team
+    if (!owns && !joined) {
+      return res.sendStatus(403)
+    }
+
+    next();
+  } catch (error) {
+    next(new Error("An error occurred"));
+  }
+});
+
 router.use('*', (req, res, next) => {
     let urlParams = req.params[0].split('/');
     let chatId = urlParams[2];
-    req.serverUploadPath = `${uploadDir}/${chatId}`;
+    req.serverUploadPath = path.join(uploadDir, chatId);
     if (!fs.existsSync(req.serverUploadPath) && urlParams[1] === 'list'){
         fs.mkdirSync(req.serverUploadPath, {recursive: true});
         next();
@@ -74,7 +114,7 @@ router.post('/rename/:chatId/:fileName', (req, res) => {
 })
 
 //file duplicate route
-router.post('/:chatId/:fileName', async (req, res) => {
+router.post('/duplicate/:chatId/:fileName', async (req, res) => {
     const { chatId, fileName } = req.params;
     const sourcePath = `${uploadDir}/${chatId}/${fileName}`;
     let destPath;
@@ -119,7 +159,7 @@ router.post('/:chatId/:fileName', async (req, res) => {
 })
 
 //file delete route
-router.delete('/:chatId?/:fileName', (req, res) => {
+router.delete('/delete/:chatId/:fileName', (req, res) => {
     try{
         let {chatId, fileName} = req.params;
         let filePath = `${uploadDir}/${chatId}/${fileName}`;
@@ -165,4 +205,16 @@ function cleanFileName(dir){
         return dir
     }
     return dir.split(/[.()]/g);
+}
+
+//retrieves users id from the stored cookie
+async function findUID(userObj, req) {
+  const [[queriedUser]] = await req.db.query(
+      `SELECT * FROM users WHERE email = :userEmail AND password = :userPW AND deleted = 0`,
+      {
+          "userEmail": userObj.email,
+          "userPW": userObj.securePassword
+      }
+  );
+  return queriedUser.id
 }
