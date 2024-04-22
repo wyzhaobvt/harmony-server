@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
+const router = express.Router()
 
 const port = process.env.SERVER_PORT;
 
@@ -17,7 +18,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-app.use(async function (req, res, next) {
+router.use(async function (req, res, next) {
     try {
         req.db = await pool.getConnection();
         req.db.connection.config.namedPlaceholders = true;
@@ -36,15 +37,15 @@ app.use(async function (req, res, next) {
     }
 });
 
-app.use(express.json());
-app.use(cookieParser())
-app.use(cors({
+router.use(express.json());
+router.use(cookieParser())
+router.use(cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,
     credentials: true,
 }));
 
 
-app.use((req, res, next) => {
+router.use((req, res, next) => {
     res.secureCookie = (name, val, options = {}) => {
         res.cookie(name, val, {
             sameSite: "strict",
@@ -67,7 +68,7 @@ function authenticateToken(req, res, next) {
     })
 }
 
-app.use(authenticateToken);
+router.use(authenticateToken);
 
 //Functions
 //retrieves users id from the stored cookie
@@ -141,7 +142,7 @@ async function UIDChecker(uid, req) {
 }
 
 //Endpoints
-app.post("/createTeamRequest", async function (req, res) {
+router.post("/createTeamRequest", async function (req, res) {
     try {
         const userID = await findUID(req.user, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
@@ -171,7 +172,7 @@ app.post("/createTeamRequest", async function (req, res) {
     }
 })
 
-app.get("/loadIncomingTeamRequest", async function (req, res) {
+router.get("/loadIncomingTeamRequest", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
 
@@ -191,7 +192,7 @@ app.get("/loadIncomingTeamRequest", async function (req, res) {
     }
 })
 
-app.post("/resolveIncomingTeamRequest", async function (req, res) {
+router.post("/resolveIncomingTeamRequest", async function (req, res) {
     try {
         //Accept/Deny Check
         const acceptedCheck = req.body.accepted
@@ -251,7 +252,7 @@ app.post("/resolveIncomingTeamRequest", async function (req, res) {
 })
 
 //Friends List Endpoints
-app.post("/createFriendRequest", async function (req, res) {
+router.post("/createFriendRequest", async function (req, res) {
     try {
         const userID = await findUID(req.user, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
@@ -278,7 +279,7 @@ app.post("/createFriendRequest", async function (req, res) {
     }
 })
 
-app.get("/loadIncomingFriendRequest", async function (req, res) {
+router.get("/loadIncomingFriendRequest", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
 
@@ -298,7 +299,7 @@ app.get("/loadIncomingFriendRequest", async function (req, res) {
     }
 })
 
-app.post("/resolveIncomingFriendRequest", async function (req, res) {
+router.post("/resolveIncomingFriendRequest", async function (req, res) {
     try {
         //Accept/Deny Check
         const acceptedCheck = req.body.accepted
@@ -356,5 +357,5 @@ app.post("/resolveIncomingFriendRequest", async function (req, res) {
 })
 
 
-//Listener
-app.listen(port, () => console.log(`Server listening on http://localhost:${port}`));
+//router
+module.exports = router

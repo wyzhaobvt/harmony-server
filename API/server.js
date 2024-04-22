@@ -8,6 +8,12 @@ const path = require("path");
 require("dotenv").config();
 const chatRoutes = require("../Chat/routes");
 const calendarRoutes = require('../Calendar/calendarRoutes');
+
+const requestRoutes = require('../Database/requests.js');
+const teamRoutes = require('../Database/teamManagement.js');
+const authRoutes = require('../Database/userAuth.js');
+const userUtilsRoutes = require('../Database/userUtilities.js');
+const userToUserRoutes = require('../Database/userToUser.js');
 const fileRoutes = require("../user-to-user-fileshare/userFileShare")
 const {setup: socketSetup} = require("../Peer/sockets.cjs")
 
@@ -77,6 +83,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use("/api/users" , authRoutes)
+
 function authenticateToken(req, res, next) {
   const token = req.cookies.token;
   if (token == null) {
@@ -99,6 +107,10 @@ app.use(express.static(path.join(__dirname, "../dist")));
 
 app.use("/api/chat", chatRoutes);
 
+app.use("/api/database" , requestRoutes)
+app.use("/api/database" , teamRoutes)
+app.use("/api/database" , userToUserRoutes)
+app.use("/api/database" , userUtilsRoutes)
 app.use("/files", fileRoutes)
 
 app.get("/server/status", (req, res) => {

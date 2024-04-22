@@ -5,6 +5,7 @@ const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
+const router = express.Router()
 
 const port = 4 + +process.env.SERVER_PORT;
 
@@ -17,7 +18,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-app.use(async function (req, res, next) {
+router.use(async function (req, res, next) {
     try {
         req.db = await pool.getConnection();
         req.db.connection.config.namedPlaceholders = true;
@@ -36,15 +37,15 @@ app.use(async function (req, res, next) {
     }
 });
 
-app.use(express.json());
-app.use(cookieParser())
-app.use(cors({
+router.use(express.json());
+router.use(cookieParser())
+router.use(cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,
     credentials: true,
 }));
 
 
-app.use((req, res, next) => {
+router.use((req, res, next) => {
     res.secureCookie = (name, val, options = {}) => {
         res.cookie(name, val, {
             sameSite: "strict",
@@ -72,7 +73,7 @@ function authenticateToken(req, res, next) {
     });
   }
   
-  app.use(authenticateToken);
+  router.use(authenticateToken);
 
 //functions
 //retrieves users id from the stored cookie
@@ -130,7 +131,7 @@ async function verifyTeamOwner(teamUID, userID, req) {
 
 //endpoints
 //load friends list / user 1 is the sender and user 2 is the reciever
-app.get("/loadFriendsList", async function (req, res) {
+router.get("/loadFriendsList", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
 
@@ -160,7 +161,7 @@ app.get("/loadFriendsList", async function (req, res) {
 })
 
 //remove friend
-app.post("/removeFriend", async function (req, res) {
+router.post("/removeFriend", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
         const targetID = await findTargetUID(req.body.targetEmail, req);
@@ -193,7 +194,5 @@ app.post("/removeFriend", async function (req, res) {
 })
 
 
-//listener
-app.listen(port, () =>
-    console.log(`Server listening on http://localhost:${port}`)
-);
+//router
+module.exports = router
