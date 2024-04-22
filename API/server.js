@@ -7,6 +7,7 @@ const path = require("path");
 require("dotenv").config();
 const chatRoutes = require("../Chat/routes");
 const calendarRoutes = require('../Calendar/calendarRoutes');
+
 const requestRoutes = require('../Database/requests.js');
 const teamRoutes = require('../Database/teamManagement.js');
 const authRoutes = require('../Database/userAuth.js');
@@ -95,7 +96,7 @@ app.use("/api/database" , requestRoutes)
 app.use("/api/database" , teamRoutes)
 app.use("/api/database" , userToUserRoutes)
 app.use("/api/database" , userUtilsRoutes)
-
+app.use("/files", fileRoutes)
 
 app.get("/server/status", (req, res) => {
   res.send("Server is functioning properly.");
