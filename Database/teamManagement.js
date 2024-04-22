@@ -5,6 +5,7 @@ const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
+const router = express.Router()
 
 const port = 1 + +process.env.SERVER_PORT;
 
@@ -17,7 +18,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME,
 });
 
-app.use(async function (req, res, next) {
+router.use(async function (req, res, next) {
     try {
         req.db = await pool.getConnection();
         req.db.connection.config.namedPlaceholders = true;
@@ -36,16 +37,16 @@ app.use(async function (req, res, next) {
     }
 });
 
-app.use(express.json());
-app.use(cookieParser());
-app.use(
+router.use(express.json());
+router.use(cookieParser());
+router.use(
     cors({
         origin: `http://localhost:${process.env.CLIENT_PORT}`,
         credentials: true,
     })
 );
 
-app.use((req, res, next) => {
+router.use((req, res, next) => {
     res.secureCookie = (name, val, options = {}) => {
         res.cookie(name, val, {
             sameSite: "strict",
@@ -73,12 +74,12 @@ function authenticateToken(req, res, next) {
     });
 }
 
-app.use(authenticateToken);
+router.use(authenticateToken);
 
 //Endpoints
 
 //Create Team
-app.post("/createTeam", async function (req, res) {
+router.post("/createTeam", async function (req, res) {
     try {
         const UID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('');
         const UserID = await findUID(req.user, req);
@@ -105,7 +106,7 @@ app.post("/createTeam", async function (req, res) {
 })
 
 //Add Team Link
-app.post("/addToTeam", async function (req, res) {
+router.post("/addToTeam", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
         const targetID = await findTargetUID(req.body.targetEmail, req);
@@ -129,7 +130,7 @@ app.post("/addToTeam", async function (req, res) {
 })
 
 //Load Team List
-app.get("/loadJoinedTeams", async function (req, res) {
+router.get("/loadJoinedTeams", async function (req, res) {
     try {
 
         const userID = await findUID(req.user, req);
@@ -169,7 +170,7 @@ app.get("/loadJoinedTeams", async function (req, res) {
 })
 
 //Remove Team Link
-app.post("/removeTeamLink", async function (req, res) {
+router.post("/removeTeamLink", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
         const isOwner = await verifyTeamOwner(req.body.teamUID, userID, req)
@@ -197,7 +198,7 @@ app.post("/removeTeamLink", async function (req, res) {
 })
 
 //Leave Team
-app.post("/leaveTeam", async function (req, res) {
+router.post("/leaveTeam", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
         const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req);
@@ -226,7 +227,7 @@ app.post("/leaveTeam", async function (req, res) {
 })
 
 //Update Team Name
-app.post("/updateTeamName", async function (req, res) {
+router.post("/updateTeamName", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
         const ownerCheck = await verifyTeamOwner(req.body.teamUID, userID, req);
@@ -256,7 +257,7 @@ app.post("/updateTeamName", async function (req, res) {
 })
 
 //Delete Team
-app.post("/deleteTeam", async function (req, res) {
+router.post("/deleteTeam", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
         const ownerCheck = await verifyTeamOwner(req.body.teamUID, userID, req);
@@ -293,7 +294,7 @@ app.post("/deleteTeam", async function (req, res) {
     }
 })
 
-app.post("/loadTeamMemberList", async function (req, res) {
+router.post("/loadTeamMemberList", async function (req, res) {
     try {
         const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req)
 
@@ -378,8 +379,6 @@ async function verifyTeamOwner(teamUID, userID, req) {
     }
 }
 
-//Listener
 
-app.listen(port, () =>
-    console.log(`Server listening on http://localhost:${port}`)
-);
+//router
+module.exports = router

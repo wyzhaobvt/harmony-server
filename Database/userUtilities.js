@@ -6,12 +6,13 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 const cloudinary = require('../cloudinary/cloudinary')
 require("dotenv").config();
+const router = express.Router()
 
 const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
-app.use(express.json({ limit: "50mb" }))
+router.use(express.json({ limit: "50mb" }))
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -20,7 +21,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-app.use(async function (req, res, next) {
+router.use(async function (req, res, next) {
     try {
         req.db = await pool.getConnection();
         req.db.connection.config.namedPlaceholders = true;
@@ -39,15 +40,15 @@ app.use(async function (req, res, next) {
     }
 });
 
-app.use(express.json());
-app.use(cookieParser())
-app.use(cors({
+router.use(express.json());
+router.use(cookieParser())
+router.use(cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,
     credentials: true,
 }));
 
 
-app.use((req, res, next) => {
+router.use((req, res, next) => {
     res.secureCookie = (name, val, options = {}) => {
         res.cookie(name, val, {
             sameSite: "strict",
@@ -60,88 +61,6 @@ app.use((req, res, next) => {
 });
 
 //Endpoints
-
-//Register User
-app.post("/registerUser",
-    async function (req, res) {
-        try {
-            // Duplicate Email Check
-            const dupeEmail = await isDupeEmail(req.body.email, req);
-            
-            if (dupeEmail) {
-              res.status(409).json({ success: false, message: "Email already in use" });
-              return;
-            }      
-
-            // Password Encryption
-            const hashPW = await bcrypt.hash(req.body.password, 10);
-            const user = { "email": req.body.email, "securePassword": hashPW };
-
-            //Create a personal call link/key
-            const linkUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('')
-            const hashedLinkHead = await bcrypt.hash(req.body.email, 10)
-            const calllink = `${hashedLinkHead}/${linkUID}`
-
-            // Inserting new user into db
-            await req.db.query('INSERT INTO users (email, password, username , userCallLink , profileURL , deleted) VALUES (:email, :password, :username , :calllink , "" , false)', {
-                email: user.email,
-                password: user.securePassword,
-                username: req.body.username,
-                calllink: calllink
-            });
-
-            const accessToken = jwt.sign(user, process.env.JWT_KEY);
-
-            res.secureCookie("token", accessToken);
-            
-            res.status(201).json({ "success": true })
-        } catch (error) {
-            console.log(error);
-            res.status(500).send("An error has occurred");
-        }
-    }
-);
-
-//Login User
-app.post("/loginUser",
-    async function (req, res) {
-        try {
-            // Find User in DB
-            const [[user]] = await req.db.query('SELECT * FROM users WHERE email = :email AND deleted = 0', { email: req.body.email });
-
-            // Password Validation
-            //const compare = user && validatePassword(req.body.password) && await bcrypt.compare(req.body.password, user.securePassword);
-            const compare = user && await bcrypt.compare(req.body.password, user.password);
-
-            if (!compare) {
-                res.status(401).json({ "success": false, "message": "Incorrect username or password." });
-                return;
-            }
-
-            const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
-
-            res.secureCookie("token", accessToken)
-
-            res.status(200).json({ "success": true })
-        } catch (error) {
-            console.log(error);
-            res.status(500).send("An error has occurred");
-        }
-    }
-);
-
-//Logout User
-app.post("/logoutUser",
-    async function (req, res) {
-      try {
-        res.clearCookie("token");
-        res.status(200).json({ success: true });
-      } catch (error) {
-        console.log(error);
-        res.status(500).send("An error has occurred");
-      }
-    }
-);
 
 //Private Endpoints
 //Authorize JWT
@@ -156,10 +75,10 @@ function authenticateToken(req, res, next) {
     })
   }
   
-  app.use(authenticateToken);
+  router.use(authenticateToken);
 
 //Delete User
-app.post("/deleteUser",
+router.post("/deleteUser",
     async function (req, res) {
         try {
             const userID = await findUID(req.user, req);
@@ -202,7 +121,7 @@ app.post("/deleteUser",
 );
 
 // Update User
-app.post("/updateUser", async function (req, res) {
+router.post("/updateUser", async function (req, res) {
   try {
     const { username, email } = req.body;
     const userId = await findUID(req.user, req);
@@ -245,7 +164,7 @@ app.post("/updateUser", async function (req, res) {
 });
 
 // Verify Peer Connection
-app.get("/peer/authenticate", express.json(), async (req, res) => {
+router.get("/peer/authenticate", express.json(), async (req, res) => {
   try {
     const [[queriedUser]] = await req.db.query(
       `SELECT * FROM users WHERE email = :userEmail AND password = :userPW AND deleted = 0`,
@@ -295,7 +214,7 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
 });
 
 // Upload or update user avatar
-app.post("/uploadAvatar", async (req, res) => {
+router.post("/uploadAvatar", async (req, res) => {
   try {
     const { image, avatarLink } = req.body;
     const userId = await findUID(req.user, req);
@@ -354,7 +273,7 @@ app.post("/uploadAvatar", async (req, res) => {
 });
 
 // Delete user avatar
-app.delete("/deleteAvatar", async (req, res) => {
+router.delete("/deleteAvatar", async (req, res) => {
   try {
     const { avatarLink } = req.body;
     const userId = await findUID(req.user, req);
@@ -393,7 +312,7 @@ app.delete("/deleteAvatar", async (req, res) => {
 });
 
 // Get user data
-app.get("/getUser", async (req, res) => {
+router.get("/getUser", async (req, res) => {
   try {
     const userId = await findUID(req.user, req);
 
@@ -453,8 +372,5 @@ async function isDupeEmail(dupeCheckEmail, req) {
   return false;
 }
 
-//Listener
-
-app.listen(port, () =>
-  console.log(`Server listening on http://localhost:${port}`)
-);
+//router
+module.exports = router
