@@ -76,7 +76,7 @@ router.post("/registerUser",
 
             // Password Encryption
             const hashPW = await bcrypt.hash(req.body.password, 10);
-            const user = { "email": req.body.email, "securePassword": hashPW };
+            const user = { "email": req.body.email, "username": req.body.username, "securePassword": hashPW };
 
             //Create a personal call link/key
             const linkUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join('')
@@ -119,7 +119,7 @@ router.post("/loginUser",
                 return;
             }
 
-            const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
+            const accessToken = jwt.sign({ "email": user.email, "username": req.body.username, "securePassword": user.password }, process.env.JWT_KEY);
 
             res.secureCookie("token", accessToken)
 
