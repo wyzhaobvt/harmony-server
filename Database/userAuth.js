@@ -12,7 +12,7 @@ const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
-app.use(express.json({ limit: "50mb" }))
+router.use(express.json({ limit: "50mb" }))
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -21,7 +21,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-app.use(async function (req, res, next) {
+router.use(async function (req, res, next) {
     try {
         req.db = await pool.getConnection();
         req.db.connection.config.namedPlaceholders = true;
@@ -40,15 +40,15 @@ app.use(async function (req, res, next) {
     }
 });
 
-app.use(express.json());
-app.use(cookieParser())
-app.use(cors({
+router.use(express.json());
+router.use(cookieParser())
+router.use(cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,
     credentials: true,
 }));
 
 
-app.use((req, res, next) => {
+router.use((req, res, next) => {
     res.secureCookie = (name, val, options = {}) => {
         res.cookie(name, val, {
             sameSite: "strict",
@@ -63,7 +63,7 @@ app.use((req, res, next) => {
 //Endpoints
 
 //Register User
-app.post("/registerUser",
+router.post("/registerUser",
     async function (req, res) {
         try {
             // Duplicate Email Check
@@ -104,7 +104,7 @@ app.post("/registerUser",
 );
 
 //Login User
-app.post("/loginUser",
+router.post("/loginUser",
     async function (req, res) {
         try {
             // Find User in DB
@@ -132,7 +132,7 @@ app.post("/loginUser",
 );
 
 //Logout User
-app.post("/logoutUser",
+router.post("/logoutUser",
     async function (req, res) {
       try {
         res.clearCookie("token");
@@ -143,21 +143,6 @@ app.post("/logoutUser",
       }
     }
 );
-
-//Private Endpoints
-//Authorize JWT
-function authenticateToken(req, res, next) {
-    const token = req.cookies.token
-    if (token == null) { return res.sendStatus(401) };
-  
-    jwt.verify(token, process.env.JWT_KEY, (err, user) => {
-      if (err) { console.log(err); return res.sendStatus(403) }
-      req.user = user;
-      next()
-    })
-  }
-  
-  app.use(authenticateToken);
 
 //Functions
 function validatePassword(password) {

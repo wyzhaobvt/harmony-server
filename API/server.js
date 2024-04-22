@@ -12,6 +12,7 @@ const teamRoutes = require('../Database/teamManagement.js');
 const authRoutes = require('../Database/userAuth.js');
 const userUtilsRoutes = require('../Database/userUtilities.js');
 const userToUserRoutes = require('../Database/userToUser.js');
+const fileRoutes = require("../user-to-user-fileshare/userFileShare")
 
 
 const port = process.env.SERVER_PORT;
@@ -94,6 +95,7 @@ app.use("/api/database" , requestRoutes)
 app.use("/api/database" , teamRoutes)
 app.use("/api/database" , userToUserRoutes)
 app.use("/api/database" , userUtilsRoutes)
+
 
 app.get("/server/status", (req, res) => {
   res.send("Server is functioning properly.");

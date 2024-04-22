@@ -12,7 +12,7 @@ const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
-app.use(express.json({ limit: "50mb" }))
+router.use(express.json({ limit: "50mb" }))
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -21,7 +21,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-app.use(async function (req, res, next) {
+router.use(async function (req, res, next) {
     try {
         req.db = await pool.getConnection();
         req.db.connection.config.namedPlaceholders = true;
@@ -40,15 +40,15 @@ app.use(async function (req, res, next) {
     }
 });
 
-app.use(express.json());
-app.use(cookieParser())
-app.use(cors({
+router.use(express.json());
+router.use(cookieParser())
+router.use(cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,
     credentials: true,
 }));
 
 
-app.use((req, res, next) => {
+router.use((req, res, next) => {
     res.secureCookie = (name, val, options = {}) => {
         res.cookie(name, val, {
             sameSite: "strict",
@@ -75,10 +75,10 @@ function authenticateToken(req, res, next) {
     })
   }
   
-  app.use(authenticateToken);
+  router.use(authenticateToken);
 
 //Delete User
-app.post("/deleteUser",
+router.post("/deleteUser",
     async function (req, res) {
         try {
             const userID = await findUID(req.user, req);
@@ -121,7 +121,7 @@ app.post("/deleteUser",
 );
 
 // Update User
-app.post("/updateUser", async function (req, res) {
+router.post("/updateUser", async function (req, res) {
   try {
     const { username, email } = req.body;
     const userId = await findUID(req.user, req);
@@ -164,7 +164,7 @@ app.post("/updateUser", async function (req, res) {
 });
 
 // Verify Peer Connection
-app.get("/peer/authenticate", express.json(), async (req, res) => {
+router.get("/peer/authenticate", express.json(), async (req, res) => {
   try {
     const [[queriedUser]] = await req.db.query(
       `SELECT * FROM users WHERE email = :userEmail AND password = :userPW AND deleted = 0`,
@@ -214,7 +214,7 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
 });
 
 // Upload or update user avatar
-app.post("/uploadAvatar", async (req, res) => {
+router.post("/uploadAvatar", async (req, res) => {
   try {
     const { image, avatarLink } = req.body;
     const userId = await findUID(req.user, req);
@@ -273,7 +273,7 @@ app.post("/uploadAvatar", async (req, res) => {
 });
 
 // Delete user avatar
-app.delete("/deleteAvatar", async (req, res) => {
+router.delete("/deleteAvatar", async (req, res) => {
   try {
     const { avatarLink } = req.body;
     const userId = await findUID(req.user, req);
@@ -312,7 +312,7 @@ app.delete("/deleteAvatar", async (req, res) => {
 });
 
 // Get user data
-app.get("/getUser", async (req, res) => {
+router.get("/getUser", async (req, res) => {
   try {
     const userId = await findUID(req.user, req);
 
