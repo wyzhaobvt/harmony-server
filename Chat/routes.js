@@ -1,11 +1,17 @@
 const express = require("express");
-const router = express.Router()
+const router = express.Router();
+const { sockets } = require("../Peer/sockets.cjs");
+
+router.use((req, res, next) => {
+  req.socket = sockets.get(req.user.email).socket;
+  next();
+});
 
 router.post("/load", async (req, res) => {
   try {
     const { teamUID, teamName } = req.body;
     const userId = await findUserId(req);
-    const {teamId} = await findJoinedTeamId(userId, teamUID, teamName, req);
+    const { teamId } = await findJoinedTeamId(userId, teamUID, teamName, req);
 
     if (!teamId) {
       res
@@ -13,7 +19,7 @@ router.post("/load", async (req, res) => {
         .json({ success: false, message: "User does not have access to team" });
       return;
     }
-    
+
     const [chats] = await req.db.query(
       `SELECT chats.uid, chats.sentAt, users.username AS sender, chats.message, users.profileURL, chats.isFile, chats.edited
       FROM teamschats AS chats
@@ -38,10 +44,10 @@ router.post("/create", async (req, res) => {
       Math.floor(Math.random() * 36).toString(36)
     ).join("");
     const userId = await findUserId(req);
-    const {teamId} = await findJoinedTeamId(userId, teamUID, teamName, req);
+    const { teamId } = await findJoinedTeamId(userId, teamUID, teamName, req);
 
     if (!teamId) {
-      console.error("user not in team")
+      console.error("user not in team");
       res
         .status(403)
         .json({ success: false, message: "User does not have access to team" });
@@ -59,9 +65,13 @@ router.post("/create", async (req, res) => {
       }
     );
 
+    req.socket.to("online:" + teamUID).emit("update:new_message", {
+      team: teamUID,
+    });
+
     res.json({ success: true });
   } catch (error) {
-    console.error(error)
+    console.error(error);
     res.status(500).json({ success: false, message: "An error has occurred" });
   }
 });
@@ -70,7 +80,7 @@ router.post("/edit", async (req, res) => {
   try {
     const { chatUID, teamUID, teamName, message } = req.body;
     const userId = await findUserId(req);
-    const {teamId} = await findJoinedTeamId(userId, teamUID, teamName, req);
+    const { teamId } = await findJoinedTeamId(userId, teamUID, teamName, req);
 
     if (!teamId) {
       res
@@ -89,6 +99,10 @@ router.post("/edit", async (req, res) => {
       }
     );
 
+    req.socket.to("online:" + teamUID).emit("update:edited_message", {
+      team: teamUID,
+    });
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: "An error has occurred" });
@@ -99,7 +113,7 @@ router.delete("/delete", async (req, res) => {
   try {
     const { chatUID, teamUID, teamName } = req.body;
     const userId = await findUserId(req);
-    const {teamId} = await findJoinedTeamId(userId, teamUID, teamName, req);
+    const { teamId } = await findJoinedTeamId(userId, teamUID, teamName, req);
 
     if (!teamId) {
       res
@@ -119,13 +133,17 @@ router.delete("/delete", async (req, res) => {
       {
         uid: chatUID,
         userId,
-        teamId
+        teamId,
       }
     );
 
+    req.socket.to("online:" + teamUID).emit("update:deleted_message", {
+      team: teamUID,
+    });
+
     res.json({ success: true });
   } catch (error) {
-    console.error(error)
+    console.error(error);
     res.status(500).json({ success: false, message: "An error has occurred" });
   }
 });
@@ -144,7 +162,7 @@ async function findUserId(req) {
 }
 
 /**
- * finds team id from uid that user is in 
+ * finds team id from uid that user is in
  * @returns {Promise<{teamId?: number, ownerId?: number}>}
  */
 async function findJoinedTeamId(userId, teamUID, teamName, req) {
@@ -164,4 +182,4 @@ async function findJoinedTeamId(userId, teamUID, teamName, req) {
   return team || {};
 }
 
-module.exports = router
+module.exports = router;

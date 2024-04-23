@@ -153,7 +153,7 @@ router.post("/updateUser", async function (req, res) {
     const [[user]] = await req.db.query('SELECT * FROM users WHERE email = :email AND deleted = 0', { email });
     
     // Update cookie to reflect new email change
-    const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
+    const accessToken = jwt.sign({ "email": user.email, "username": username, "securePassword": user.password }, process.env.JWT_KEY);
     res.secureCookie("token", accessToken);
 
     res.status(200).json({ success: true, message: "Profile has been updated successfully" });

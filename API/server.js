@@ -1,3 +1,4 @@
+const http = require("http")
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -14,11 +15,23 @@ const authRoutes = require('../Database/userAuth.js');
 const userUtilsRoutes = require('../Database/userUtilities.js');
 const userToUserRoutes = require('../Database/userToUser.js');
 const fileRoutes = require("../user-to-user-fileshare/userFileShare")
-
+const {setup: socketSetup} = require("../Peer/sockets.cjs")
 
 const port = process.env.SERVER_PORT;
 
 const app = express();
+
+const server = http.createServer(app)
+const socketIo = require("socket.io");
+
+const io = new socketIo.Server(server, {
+  cors: {
+    origin: "http://localhost:"+process.env.CLIENT_PORT,
+    methods: ["GET", "POST"],
+    credentials: true,
+    cookie: true
+  }
+})
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -26,6 +39,8 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
+
+socketSetup({io, pool})
 
 app.use(async function (req, res, next) {
   try {
@@ -106,6 +121,6 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../dist", "index.html"));
 });
 
-app.listen(port, () =>
+server.listen(port, () =>
   console.log(`Server listening on http://localhost:${port}`)
 );
