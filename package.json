@@ -10,7 +10,8 @@
     "team": "nodemon ./API/teamManagement.js",
     "mail": "nodemon ./Mailer/mailer.js",
     "signaling": "nodemon ./Peer/server.js",
-    "start-all": "concurrently npm:start npm:user npm:team npm:signaling"
+    "socket": "nodemon ./Peer/userChatSocket.js",
+    "start-all": "concurrently npm:start npm:user npm:team npm:signaling npm:socket"
   },
   "author": "",
   "license": "ISC",
@@ -28,6 +29,7 @@
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.9.2",
     "nodemailer": "^6.9.9",
+    "nodemon": "^3.1.0",
     "socket.io": "^4.7.4"
   },
   "devDependencies": {

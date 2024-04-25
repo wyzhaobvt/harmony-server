@@ -89,7 +89,7 @@ app.post("/registerUser",
                 username: req.body.username,
                 calllink: calllink
             });
-
+       
             const accessToken = jwt.sign(user, process.env.JWT_KEY);
 
             res.secureCookie("token", accessToken);
@@ -399,7 +399,7 @@ app.get("/getUser", async (req, res) => {
 
     const userData = await req.db.query(
       `
-        SELECT email, username, profileURL
+        SELECT email, username, profileURL,id
         FROM users
         WHERE id = :userId
       `,

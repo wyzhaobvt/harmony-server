@@ -88,7 +88,7 @@ router.post("/edit", async (req, res) => {
         userId: userId,
       }
     );
-
+    
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: "An error has occurred" });
