@@ -8,7 +8,6 @@ const path = require("path");
 require("dotenv").config();
 const chatRoutes = require("../Chat/routes");
 const calendarRoutes = require('../Calendar/calendarRoutes');
-
 const requestRoutes = require('../Database/requests.js');
 const teamRoutes = require('../Database/teamManagement.js');
 const authRoutes = require('../Database/userAuth.js');
@@ -23,6 +22,8 @@ const app = express();
 
 const server = http.createServer(app)
 const socketIo = require("socket.io");
+
+app.use(express.json({ limit: "50mb" }));
 
 const io = new socketIo.Server(server, {
   cors: {
