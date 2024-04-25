@@ -17,7 +17,7 @@ const userToUserRoutes = require('../Database/userToUser.js');
 const fileRoutes = require("../user-to-user-fileshare/userFileShare")
 const {setup: socketSetup} = require("../Peer/sockets.cjs")
 
-const port = process.env.SERVER_PORT;
+const port = process.env.PORT || process.env.SERVER_PORT;
 
 const app = express();
 
