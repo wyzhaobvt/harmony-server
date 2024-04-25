@@ -140,14 +140,41 @@ async function UIDChecker(uid, req) {
         return false
     }
 }
+// checks if a user is part of a team 
+async function checkUserInTeam(teamUID, teamName, userID, req) {
+    const teamID = await findTeamID(teamUID, teamName, req)
+    const [memberList] = await req.db.query(`
+      SELECT * FROM teamslinks where teamID = :teamID AND userID = :userID AND deleted = false`,
+      {
+        teamID: teamID,
+        userID: userID
+      }
+    )
+    const [ownerList] = await req.db.query(`
+      SELECT * FROM teams where id = :teamID AND userID = :userID AND deleted = false`,
+      {
+        teamID: teamID,
+        userID: userID
+      }
+    )
+    if (memberList.length || ownerList.length) {
+      return true
+    } else {
+      return false
+    }
+}
 
 //Endpoints
 router.post("/createTeamRequest", async function (req, res) {
     try {
         const userID = await findUID(req.user, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
+        if (await checkUserInTeam(req.body.teamUID, req.body.teamName, userID, req)) {
+            res.status(400).json({ success: false, message: "User is already in the team" })
+            return
+        }
         const targetID = await findTargetUID(req.body.targetEmail, req)
-        const dataRaw = { teamName: req.body.teamName, teamUID: req.body.teamID }
+        const dataRaw = { teamName: req.body.teamName, teamUID: req.body.teamUID }
         const data = JSON.stringify(dataRaw)
 
         //duplicate checking
@@ -222,7 +249,6 @@ router.post("/resolveIncomingTeamRequest", async function (req, res) {
             );
             
             const {teamUID , teamName} = JSON.parse(reqDataRaw.data)
-
             const targetID = reqDataRaw.recieverID
             const teamID = await findTeamID(teamUID , teamName, req)
 
