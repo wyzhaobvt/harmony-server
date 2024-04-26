@@ -144,23 +144,46 @@ async function UIDChecker(uid, req) {
 async function checkUserInTeam(teamUID, teamName, userID, req) {
     const teamID = await findTeamID(teamUID, teamName, req)
     const [memberList] = await req.db.query(`
-      SELECT * FROM teamslinks where teamID = :teamID AND userID = :userID AND deleted = false`,
+      SELECT * FROM teamslinks where teamID = :teamID AND addUser = :userID AND deleted = false`,
       {
         teamID: teamID,
         userID: userID
       }
     )
     const [ownerList] = await req.db.query(`
-      SELECT * FROM teams where id = :teamID AND userID = :userID AND deleted = false`,
+      SELECT * FROM teams where id = :teamID AND ownerID = :userID AND deleted = false`,
       {
         teamID: teamID,
         userID: userID
       }
     )
-    if (memberList.length || ownerList.length) {
-      return true
+    const [inviteList] = await req.db.query(`
+      SELECT * FROM requests where recieverID = :userID AND operation = "addToTeam" AND deleted = false`, 
+      {
+        userID: userID
+      }
+    )
+    const teamInvites = inviteList.some(invite=>{
+      const team = JSON.parse(invite.data)
+      if (team.teamUID === teamUID && team.teamName === teamName) {
+        return true
+      }
+    })
+    if (teamInvites) {
+      return {
+        message: "User already has an invite to the team",
+        result: true
+      }
+    } else if (memberList.length || ownerList.length) {
+      return {
+        message: "User is already in the team",
+        result: true
+      }
     } else {
-      return false
+      return {
+        message: "User is not in the team",
+        result: false
+      }
     }
 }
 
@@ -168,12 +191,13 @@ async function checkUserInTeam(teamUID, teamName, userID, req) {
 router.post("/createTeamRequest", async function (req, res) {
     try {
         const userID = await findUID(req.user, req)
+        const targetID = await findTargetUID(req.body.targetEmail, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
-        if (await checkUserInTeam(req.body.teamUID, req.body.teamName, userID, req)) {
-            res.status(400).json({ success: false, message: "User is already in the team" })
+        const isUserInTeam = await checkUserInTeam(req.body.teamUID, req.body.teamName, userID, req)
+        if (isUserInTeam.result) {
+            res.status(400).json({ success: false, message: isUserInTeam.message })
             return
         }
-        const targetID = await findTargetUID(req.body.targetEmail, req)
         const dataRaw = { teamName: req.body.teamName, teamUID: req.body.teamUID }
         const data = JSON.stringify(dataRaw)
 
