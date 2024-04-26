@@ -1,3 +1,4 @@
+const http = require("http")
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -9,9 +10,29 @@ const chatRoutes = require("../Chat/routes");
 const calendarRoutes = require('../Calendar/calendarRoutes');
 const peerChatRoutes = require('../PeerChat/routes')
 
+const requestRoutes = require('../Database/requests.js');
+const teamRoutes = require('../Database/teamManagement.js');
+const authRoutes = require('../Database/userAuth.js');
+const userUtilsRoutes = require('../Database/userUtilities.js');
+const userToUserRoutes = require('../Database/userToUser.js');
+const fileRoutes = require("../user-to-user-fileshare/userFileShare")
+const {setup: socketSetup} = require("../Peer/sockets.cjs")
+
 const port = process.env.SERVER_PORT;
 
 const app = express();
+
+const server = http.createServer(app)
+const socketIo = require("socket.io");
+
+const io = new socketIo.Server(server, {
+  cors: {
+    origin: "http://localhost:"+process.env.CLIENT_PORT,
+    methods: ["GET", "POST"],
+    credentials: true,
+    cookie: true
+  }
+})
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -19,6 +40,8 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
+
+socketSetup({io, pool})
 
 app.use(async function (req, res, next) {
   try {
@@ -61,6 +84,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use("/api/users" , authRoutes)
+
 function authenticateToken(req, res, next) {
   const token = req.cookies.token;
   if (token == null) {
@@ -83,6 +108,13 @@ app.use(express.static(path.join(__dirname, "../dist")));
 
 app.use("/api/chat", chatRoutes);
 app.use("/api/peerchat", peerChatRoutes);
+
+app.use("/api/database" , requestRoutes)
+app.use("/api/database" , teamRoutes)
+app.use("/api/database" , userToUserRoutes)
+app.use("/api/database" , userUtilsRoutes)
+app.use("/files", fileRoutes)
+
 app.get("/server/status", (req, res) => {
   res.send("Server is functioning properly.");
 });
@@ -91,6 +123,6 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../dist", "index.html"));
 });
 
-app.listen(port, () =>
+server.listen(port, () =>
   console.log(`Server listening on http://localhost:${port}`)
 );

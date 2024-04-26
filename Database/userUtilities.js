@@ -6,12 +6,13 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 const cloudinary = require('../cloudinary/cloudinary')
 require("dotenv").config();
+const router = express.Router()
 
 const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
-app.use(express.json({ limit: "50mb" }))
+router.use(express.json({ limit: "50mb" }))
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -20,7 +21,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-app.use(async function (req, res, next) {
+router.use(async function (req, res, next) {
     try {
         req.db = await pool.getConnection();
         req.db.connection.config.namedPlaceholders = true;
@@ -39,15 +40,15 @@ app.use(async function (req, res, next) {
     }
 });
 
-app.use(express.json());
-app.use(cookieParser())
-app.use(cors({
+router.use(express.json());
+router.use(cookieParser())
+router.use(cors({
     origin: `http://localhost:${process.env.CLIENT_PORT}`,
     credentials: true,
 }));
 
 
-app.use((req, res, next) => {
+router.use((req, res, next) => {
     res.secureCookie = (name, val, options = {}) => {
         res.cookie(name, val, {
             sameSite: "strict",
@@ -61,6 +62,7 @@ app.use((req, res, next) => {
 
 //Endpoints
 
+<<<<<<< HEAD:API/userAuth.js
 //Register User
 app.post("/registerUser",
     async function (req, res) {
@@ -143,6 +145,8 @@ app.post("/logoutUser",
     }
 );
 
+=======
+>>>>>>> main:Database/userUtilities.js
 //Private Endpoints
 //Authorize JWT
 function authenticateToken(req, res, next) {
@@ -156,10 +160,10 @@ function authenticateToken(req, res, next) {
     })
   }
   
-  app.use(authenticateToken);
+  router.use(authenticateToken);
 
 //Delete User
-app.post("/deleteUser",
+router.post("/deleteUser",
     async function (req, res) {
         try {
             const userID = await findUID(req.user, req);
@@ -202,7 +206,7 @@ app.post("/deleteUser",
 );
 
 // Update User
-app.post("/updateUser", async function (req, res) {
+router.post("/updateUser", async function (req, res) {
   try {
     const { username, email } = req.body;
     const userId = await findUID(req.user, req);
@@ -234,7 +238,7 @@ app.post("/updateUser", async function (req, res) {
     const [[user]] = await req.db.query('SELECT * FROM users WHERE email = :email AND deleted = 0', { email });
     
     // Update cookie to reflect new email change
-    const accessToken = jwt.sign({ "email": user.email, "securePassword": user.password }, process.env.JWT_KEY);
+    const accessToken = jwt.sign({ "email": user.email, "username": username, "securePassword": user.password }, process.env.JWT_KEY);
     res.secureCookie("token", accessToken);
 
     res.status(200).json({ success: true, message: "Profile has been updated successfully" });
@@ -245,7 +249,7 @@ app.post("/updateUser", async function (req, res) {
 });
 
 // Verify Peer Connection
-app.get("/peer/authenticate", express.json(), async (req, res) => {
+router.get("/peer/authenticate", express.json(), async (req, res) => {
   try {
     const [[queriedUser]] = await req.db.query(
       `SELECT * FROM users WHERE email = :userEmail AND password = :userPW AND deleted = 0`,
@@ -295,7 +299,7 @@ app.get("/peer/authenticate", express.json(), async (req, res) => {
 });
 
 // Upload or update user avatar
-app.post("/uploadAvatar", async (req, res) => {
+router.post("/uploadAvatar", async (req, res) => {
   try {
     const { image, avatarLink } = req.body;
     const userId = await findUID(req.user, req);
@@ -354,7 +358,7 @@ app.post("/uploadAvatar", async (req, res) => {
 });
 
 // Delete user avatar
-app.delete("/deleteAvatar", async (req, res) => {
+router.delete("/deleteAvatar", async (req, res) => {
   try {
     const { avatarLink } = req.body;
     const userId = await findUID(req.user, req);
@@ -393,7 +397,7 @@ app.delete("/deleteAvatar", async (req, res) => {
 });
 
 // Get user data
-app.get("/getUser", async (req, res) => {
+router.get("/getUser", async (req, res) => {
   try {
     const userId = await findUID(req.user, req);
 
@@ -453,8 +457,5 @@ async function isDupeEmail(dupeCheckEmail, req) {
   return false;
 }
 
-//Listener
-
-app.listen(port, () =>
-  console.log(`Server listening on http://localhost:${port}`)
-);
+//router
+module.exports = router

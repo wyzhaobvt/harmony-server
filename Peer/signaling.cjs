@@ -11,6 +11,7 @@ const ID = "peer:";
 /**
  * adds webrtc signaling
  * @param {SocketIoServer} io
+ * @returns {{sockets: Map<string, UserData>, rooms: Set<string>}}
  * @example
  * // needs user data to function
  * // set this when authenticating socket
@@ -241,6 +242,8 @@ function peerServer(io) {
       };
     }
   });
+
+  return {sockets, rooms}
 
   /**
    * @param {string} id room id
