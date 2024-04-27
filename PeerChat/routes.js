@@ -67,7 +67,6 @@ router.put("/edit", async (req, res) => {
       return;
     }
     const senderId = await findUserId(req, userSender);
-    console.log(senderId)
     if (!senderId) {
       res.status(404).json({ success: false, message: "Error: UserSender not found" });
       return;
@@ -87,7 +86,6 @@ router.put("/edit", async (req, res) => {
         userSender:senderId
       }
     );
-   console.log(response)
     res.json({ success: true});
   } catch (error) {
     res.status(500).json({ success: false, message: "Fail to update message" });
@@ -122,7 +120,6 @@ router.put("/delete", async (req, res) => {
         userSender:senderId
       }
     );
-console.log(response)
     // Send success response
     res.json({ success: true });
   } catch (error) {

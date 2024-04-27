@@ -24,6 +24,9 @@ const app = express();
 
 const server = http.createServer(app)
 const socketIo = require("socket.io");
+const userChatSocket = require("../Peer/userChatSocket.js");
+
+app.use(express.json({ limit: "50mb" }));
 
 const io = new socketIo.Server(server, {
   cors: {
@@ -40,7 +43,7 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
-
+userChatSocket(io);
 socketSetup({io, pool})
 
 app.use(async function (req, res, next) {

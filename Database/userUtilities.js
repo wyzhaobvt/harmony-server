@@ -12,8 +12,6 @@ const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
-router.use(express.json({ limit: "50mb" }))
-
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -62,7 +60,6 @@ router.use((req, res, next) => {
 
 //Endpoints
 
-<<<<<<< HEAD:API/userAuth.js
 //Register User
 app.post("/registerUser",
     async function (req, res) {
@@ -145,8 +142,6 @@ app.post("/logoutUser",
     }
 );
 
-=======
->>>>>>> main:Database/userUtilities.js
 //Private Endpoints
 //Authorize JWT
 function authenticateToken(req, res, next) {

@@ -5,13 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon ./API/server.js",
-    "user": "nodemon ./API/userAuth.js",
-    "team": "nodemon ./API/teamManagement.js",
-    "mail": "nodemon ./Mailer/mailer.js",
-    "signaling": "nodemon ./Peer/server.js",
-    "socket": "nodemon ./Peer/userChatSocket.js",
-    "start-all": "concurrently npm:start npm:user npm:team npm:signaling npm:socket"
+    "start": "nodemon ./API/server.js"
+   
   },
   "author": "",
   "license": "ISC",

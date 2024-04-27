@@ -22,11 +22,11 @@ const io = require("socket.io")(server, {
     methods: ["GET", "POST"],
   }
 })
-
+// userChatSocket(io)
 // io.use(socketAuth(process.env.SIGNALING_KEY))
 
 // peerServer(io)
-userChatSocket(io)
+
 server.listen(PORT, () => {
   console.log(`Signaling Port Started on http://localhost:${PORT}`)
 })
