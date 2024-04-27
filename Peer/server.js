@@ -1,5 +1,3 @@
-const userChatSocket = require("./userChatSocket");
-
 const server = require("http").createServer(function (req,res){
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Request-Method', '*');
@@ -22,10 +20,10 @@ const io = require("socket.io")(server, {
     methods: ["GET", "POST"],
   }
 })
-// userChatSocket(io)
-// io.use(socketAuth(process.env.SIGNALING_KEY))
 
-// peerServer(io)
+io.use(socketAuth(process.env.SIGNALING_KEY))
+
+peerServer(io)
 
 server.listen(PORT, () => {
   console.log(`Signaling Port Started on http://localhost:${PORT}`)
