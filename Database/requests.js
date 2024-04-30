@@ -140,7 +140,7 @@ async function UIDChecker(uid, req) {
         return false
     }
 }
-// checks if a user is part of a team 
+// checks if a user is part of a team or has an invite to a team
 async function checkUserInTeam(teamUID, teamName, userID, req) {
     const teamID = await findTeamID(teamUID, teamName, req)
     const [memberList] = await req.db.query(`
@@ -169,9 +169,10 @@ async function checkUserInTeam(teamUID, teamName, userID, req) {
         return true
       }
     })
+
     if (teamInvites) {
       return {
-        message: "User already has an invite to the team",
+        message: "User already invited to team",
         result: true
       }
     } else if (memberList.length || ownerList.length) {
@@ -193,7 +194,7 @@ router.post("/createTeamRequest", async function (req, res) {
         const userID = await findUID(req.user, req)
         const targetID = await findTargetUID(req.body.targetEmail, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
-        const isUserInTeam = await checkUserInTeam(req.body.teamUID, req.body.teamName, userID, req)
+        const isUserInTeam = await checkUserInTeam(req.body.teamUID, req.body.teamName, targetID, req)
         if (isUserInTeam.result) {
             res.status(400).json({ success: false, message: isUserInTeam.message })
             return
