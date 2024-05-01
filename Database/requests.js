@@ -91,7 +91,7 @@ async function findTargetUID(targetEmail, req) {
             "userEmail": targetEmail,
         }
     );
-    return queriedUser.id
+    return queriedUser?.id
 }
 
 //finds team id from uid
@@ -308,6 +308,11 @@ router.post("/createFriendRequest", async function (req, res) {
         const userID = await findUID(req.user, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
         const targetID = await findTargetUID(req.body.targetEmail, req)
+
+        if (!targetID) {
+            res.status(400).json({ success: false, message: "Target user not found" })
+            return
+        }
 
         //duplicate checking
         while (await UIDChecker(requestUID, req)) {
