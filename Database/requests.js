@@ -217,8 +217,6 @@ async function checkUserFriendsWithTarget(targetID, userID, req) {
     }
   )
 
-  console.log({friendList: friendList.length, friendRequestList: friendRequestList.length}) 
-
   if (friendList.length) {
     return {
       message: "Already friends with this user",
