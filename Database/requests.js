@@ -201,7 +201,7 @@ async function checkUserInTeam(teamUID, teamName, userID, req) {
 async function checkUserFriendsWithTarget(targetID, userID, req) {
   // check if the users are already friends
   const [friendList] = await req.db.query(`
-    SELECT * FROM usersLinks where (userID1 = :userID AND userID2 = :targetID) OR (userID1 = :targetID AND userID2 = :userID) AND deleted = false`,
+    SELECT * FROM usersLinks where ((userID1 = :userID AND userID2 = :targetID) OR (userID1 = :targetID AND userID2 = :userID)) AND deleted = false`,
     {
       userID: userID,
       targetID: targetID
@@ -210,12 +210,14 @@ async function checkUserFriendsWithTarget(targetID, userID, req) {
 
   // check if the user has already sent a friend request to the target
   const [friendRequestList] = await req.db.query(`
-    SELECT * FROM requests where (recieverID = :userID AND senderID = :targetID) OR (recieverID = :targetID AND senderID = :userID) AND operation = "addFriend" AND deleted = false`,
+    SELECT * FROM requests where ((recieverID = :userID AND senderID = :targetID) OR (recieverID = :targetID AND senderID = :userID)) AND operation = "addFriend" AND deleted = false`,
     {
       userID: userID,
       targetID: targetID
     }
   )
+
+  console.log({friendList: friendList.length, friendRequestList: friendRequestList.length}) 
 
   if (friendList.length) {
     return {
