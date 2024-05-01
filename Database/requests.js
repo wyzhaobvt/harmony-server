@@ -188,6 +188,53 @@ async function checkUserInTeam(teamUID, teamName, userID, req) {
     }
 }
 
+/**
+ * Checks if the user is already friends with the target or has a pending friend request
+ * @param {number} targetID 
+ * @param {number} userID 
+ * @param {express.Request} req 
+ * @returns {{result: boolean, message: string}}
+ * @example
+ * checkUserFriendsWithTarget(targetID, userID, req) // result: true -> currently friends / pending friend request
+ * checkUserFriendsWithTarget(targetID, userID, req) // result: false -> not friends / no pending friend request
+ */
+async function checkUserFriendsWithTarget(targetID, userID, req) {
+  // check if the users are already friends
+  const [friendList] = await req.db.query(`
+    SELECT * FROM usersLinks where (userID1 = :userID AND userID2 = :targetID) OR (userID1 = :targetID AND userID2 = :userID) AND deleted = false`,
+    {
+      userID: userID,
+      targetID: targetID
+    }
+  )
+
+  // check if the user has already sent a friend request to the target
+  const [friendRequestList] = await req.db.query(`
+    SELECT * FROM requests where (recieverID = :userID AND senderID = :targetID) OR (recieverID = :targetID AND senderID = :userID) AND operation = "addFriend" AND deleted = false`,
+    {
+      userID: userID,
+      targetID: targetID
+    }
+  )
+
+  if (friendList.length) {
+    return {
+      message: "Already friends with this user",
+      result: true,
+    }
+  } else if (friendRequestList.length) {
+    return {
+      message: "Friend request is already pending",
+      result: true,
+    }
+  } else {
+    return {
+      message: "Users are not friends",
+      result: false,
+    }
+  }
+}
+
 //Endpoints
 router.post("/createTeamRequest", async function (req, res) {
     try {
@@ -308,6 +355,11 @@ router.post("/createFriendRequest", async function (req, res) {
         const userID = await findUID(req.user, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
         const targetID = await findTargetUID(req.body.targetEmail, req)
+        const isUserFriendsWithTarget = await checkUserFriendsWithTarget(targetID, userID, req)
+        if (isUserFriendsWithTarget.result) {
+            res.status(400).json({ success: false, message: isUserFriendsWithTarget.message })
+            return
+        }
 
         if (!targetID) {
             res.status(400).json({ success: false, message: "Target user not found" })
