@@ -4,7 +4,7 @@ const router = express.Router()
 const { sockets } = require("../Peer/sockets.cjs");
 
 router.use((req, res, next) => {
-  req.socket = sockets.get(req.user.email).socket;
+  req.socket = sockets.get(req.user.email)?.socket;
   next();
 });
 
@@ -201,6 +201,9 @@ router.post("/createTeamRequest", async function (req, res) {
                 recieverID: targetID,
                 data: data
             })
+
+        const receivingSocket = sockets.get(req.body.targetEmail).socket
+        receivingSocket.emit("update:new_team_request", {team: req.body.teamName})
 
         res.status(200).json({ success: true })
     } catch (error) {
