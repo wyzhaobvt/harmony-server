@@ -1,74 +1,12 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors')
-const jwt = require('jsonwebtoken');
-const mysql = require('mysql2/promise');
-const cookieParser = require("cookie-parser");
-const bcrypt = require("bcrypt");
 const router = express.Router()
-
-const port = process.env.SERVER_PORT;
-
-const app = express();
-
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
-});
-
-router.use(async function (req, res, next) {
-    try {
-        req.db = await pool.getConnection();
-        req.db.connection.config.namedPlaceholders = true;
-
-        await req.db.query(`SET SESSION sql_mode = "TRADITIONAL"`);
-        await req.db.query(`SET time_zone = '-8:00'`);
-
-        await next();
-
-        req.db.release();
-    } catch (err) {
-        console.log(err);
-
-        if (req.db) req.db.release();
-        throw err;
-    }
-});
-
-router.use(express.json());
-router.use(cookieParser())
-router.use(cors({
-    origin: `http://localhost:${process.env.CLIENT_PORT}`,
-    credentials: true,
-}));
-
+const { sockets } = require("../Peer/sockets.cjs");
 
 router.use((req, res, next) => {
-    res.secureCookie = (name, val, options = {}) => {
-        res.cookie(name, val, {
-            sameSite: "strict",
-            httpOnly: true,
-            secure: true,
-            ...options,
-        });
-    };
-    next();
+  req.socket = sockets.get(req.user.email)?.socket;
+  next();
 });
-
-function authenticateToken(req, res, next) {
-    const token = req.cookies.token
-    if (token == null) { return res.sendStatus(401) };
-
-    jwt.verify(token, process.env.JWT_KEY, (err, user) => {
-        if (err) { console.log(err); return res.sendStatus(403) }
-        req.user = user;
-        next()
-    })
-}
-
-router.use(authenticateToken);
 
 //Functions
 //retrieves users id from the stored cookie
@@ -91,7 +29,7 @@ async function findTargetUID(targetEmail, req) {
             "userEmail": targetEmail,
         }
     );
-    return queriedUser.id
+    return queriedUser?.id
 }
 
 //finds team id from uid
@@ -140,14 +78,113 @@ async function UIDChecker(uid, req) {
         return false
     }
 }
+// checks if a user is part of a team or has an invite to a team
+async function checkUserInTeam(teamUID, teamName, userID, req) {
+    const teamID = await findTeamID(teamUID, teamName, req)
+    const [memberList] = await req.db.query(`
+      SELECT * FROM teamslinks where teamID = :teamID AND addUser = :userID AND deleted = false`,
+      {
+        teamID: teamID,
+        userID: userID
+      }
+    )
+    const [ownerList] = await req.db.query(`
+      SELECT * FROM teams where id = :teamID AND ownerID = :userID AND deleted = false`,
+      {
+        teamID: teamID,
+        userID: userID
+      }
+    )
+    const [inviteList] = await req.db.query(`
+      SELECT * FROM requests where recieverID = :userID AND operation = "addToTeam" AND deleted = false`, 
+      {
+        userID: userID
+      }
+    )
+    const teamInvites = inviteList.some(invite=>{
+      const team = JSON.parse(invite.data)
+      if (team.teamUID === teamUID && team.teamName === teamName) {
+        return true
+      }
+    })
+
+    if (teamInvites) {
+      return {
+        message: "User already invited to team",
+        result: true
+      }
+    } else if (memberList.length || ownerList.length) {
+      return {
+        message: "User is already in the team",
+        result: true
+      }
+    } else {
+      return {
+        message: "User is not in the team",
+        result: false
+      }
+    }
+}
+
+/**
+ * Checks if the user is already friends with the target or has a pending friend request
+ * @param {number} targetID 
+ * @param {number} userID 
+ * @param {express.Request} req 
+ * @returns {{result: boolean, message: string}}
+ * @example
+ * checkUserFriendsWithTarget(targetID, userID, req) // result: true -> currently friends / pending friend request
+ * checkUserFriendsWithTarget(targetID, userID, req) // result: false -> not friends / no pending friend request
+ */
+async function checkUserFriendsWithTarget(targetID, userID, req) {
+  // check if the users are already friends
+  const [friendList] = await req.db.query(`
+    SELECT * FROM usersLinks where ((userID1 = :userID AND userID2 = :targetID) OR (userID1 = :targetID AND userID2 = :userID)) AND deleted = false`,
+    {
+      userID: userID,
+      targetID: targetID
+    }
+  )
+
+  // check if the user has already sent a friend request to the target
+  const [friendRequestList] = await req.db.query(`
+    SELECT * FROM requests where ((recieverID = :userID AND senderID = :targetID) OR (recieverID = :targetID AND senderID = :userID)) AND operation = "addFriend" AND deleted = false`,
+    {
+      userID: userID,
+      targetID: targetID
+    }
+  )
+
+  if (friendList.length) {
+    return {
+      message: "Already friends with this user",
+      result: true,
+    }
+  } else if (friendRequestList.length) {
+    return {
+      message: "Friend request is already pending",
+      result: true,
+    }
+  } else {
+    return {
+      message: "Users are not friends",
+      result: false,
+    }
+  }
+}
 
 //Endpoints
 router.post("/createTeamRequest", async function (req, res) {
     try {
         const userID = await findUID(req.user, req)
-        let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
         const targetID = await findTargetUID(req.body.targetEmail, req)
-        const dataRaw = { teamName: req.body.teamName, teamUID: req.body.teamID }
+        let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
+        const isUserInTeam = await checkUserInTeam(req.body.teamUID, req.body.teamName, targetID, req)
+        if (isUserInTeam.result) {
+            res.status(400).json({ success: false, message: isUserInTeam.message })
+            return
+        }
+        const dataRaw = { teamName: req.body.teamName, teamUID: req.body.teamUID }
         const data = JSON.stringify(dataRaw)
 
         //duplicate checking
@@ -164,6 +201,9 @@ router.post("/createTeamRequest", async function (req, res) {
                 recieverID: targetID,
                 data: data
             })
+
+        const receivingSocket = sockets.get(req.body.targetEmail).socket
+        receivingSocket.emit("update:new_team_request", {team: req.body.teamName})
 
         res.status(200).json({ success: true })
     } catch (error) {
@@ -222,7 +262,6 @@ router.post("/resolveIncomingTeamRequest", async function (req, res) {
             );
             
             const {teamUID , teamName} = JSON.parse(reqDataRaw.data)
-
             const targetID = reqDataRaw.recieverID
             const teamID = await findTeamID(teamUID , teamName, req)
 
@@ -257,6 +296,17 @@ router.post("/createFriendRequest", async function (req, res) {
         const userID = await findUID(req.user, req)
         let requestUID = Array.from(Array(254), () => Math.floor(Math.random() * 36).toString(36)).join("")
         const targetID = await findTargetUID(req.body.targetEmail, req)
+        const isUserFriendsWithTarget = await checkUserFriendsWithTarget(targetID, userID, req)
+
+        if (isUserFriendsWithTarget.result) {
+            res.status(400).json({ success: false, message: isUserFriendsWithTarget.message })
+            return
+        }
+
+        if (!targetID) {
+            res.status(400).json({ success: false, message: "Target user not found" })
+            return
+        }
 
         //duplicate checking
         while (await UIDChecker(requestUID, req)) {
@@ -264,13 +314,17 @@ router.post("/createFriendRequest", async function (req, res) {
         }
 
         await req.db.query(`
-        INSERT INTO requests (uid , senderID , recieverID , operation , status , deleted)
-        VALUES (:uid , :senderID , :recieverID , "addFriend" , "pending" , false);`,
-            {
-                uid: requestUID,
-                senderID: userID,
-                recieverID: targetID,
-            })
+          INSERT INTO requests (uid , senderID , recieverID , operation , status , deleted)
+          VALUES (:uid , :senderID , :recieverID , "addFriend" , "pending" , false);`,
+          {
+              uid: requestUID,
+              senderID: userID,
+              recieverID: targetID,
+          }
+        )
+
+        const receivingSocket = sockets.get(req.body.targetEmail).socket
+        receivingSocket.emit("update:new_friend_request", {username: req.user.username || req.user.email})
 
         res.status(200).json({ success: true })
     } catch (error) {
@@ -304,6 +358,21 @@ router.post("/resolveIncomingFriendRequest", async function (req, res) {
         //Accept/Deny Check
         const acceptedCheck = req.body.accepted
 
+        const [[{senderID: targetID}]] = await req.db.query(
+          `SELECT senderID FROM requests WHERE uid = :requestUID`,
+          {
+            requestUID: req.body.requestUID
+          }
+        )
+
+        
+        const [[{email: targetEmail}]] = await req.db.query(
+          `SELECT email FROM users WHERE id = :targetID`,
+          {
+            targetID: targetID
+          }
+        )
+
         //Deny Resolve
         if (!acceptedCheck) {
             await req.db.query(
@@ -314,6 +383,9 @@ router.post("/resolveIncomingFriendRequest", async function (req, res) {
                     requestUID: req.body.requestUID
                 }
             )
+
+            req.socket.to(sockets.get(targetEmail).socket.id).emit("update:reject_friend_request", {username: req.user.username || req.user.email})
+
             res.status(200).json({ success: true })
             return
         }
@@ -347,6 +419,10 @@ router.post("/resolveIncomingFriendRequest", async function (req, res) {
                     requestUID: req.body.requestUID
                 }
             )
+
+            req.socket.to(sockets.get(targetEmail).socket.id).emit("update:accept_friend_request", {username: req.user.username || req.user.email})
+
+            req.socket.emit("update:accept_friend_request", {username: req.user.username || req.user.email})
 
             res.status(200).json({ "success": true })
         }
