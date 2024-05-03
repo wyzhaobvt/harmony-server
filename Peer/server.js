@@ -9,7 +9,8 @@ const server = require("http").createServer(function (req,res){
 require("dotenv").config()
 
 const peerServer = require("./signaling.cjs")
-const socketAuth = require("./socketAuth.cjs")
+const socketAuth = require("./socketAuth.cjs");
+
 
 const PORT = process.env.SIGNALING_PORT
 
