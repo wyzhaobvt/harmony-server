@@ -3,13 +3,8 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
-const bcrypt = require("bcrypt");
 require("dotenv").config();
 const router = express.Router()
-
-const port = 1 + +process.env.SERVER_PORT;
-
-const app = express();
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -101,7 +96,7 @@ router.post("/createTeam", async function (req, res) {
         res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 
@@ -110,7 +105,7 @@ router.post("/addToTeam", async function (req, res) {
     try {
         const userID = await findUID(req.user, req);
         const targetID = await findTargetUID(req.body.targetEmail, req);
-        const teamID = await findTeamID(req.body.teamID, req.body.teamName, req);
+        const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req);
 
         //optional : create a duplicate checker
 
@@ -125,7 +120,7 @@ router.post("/addToTeam", async function (req, res) {
         res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 
@@ -165,7 +160,7 @@ router.get("/loadJoinedTeams", async function (req, res) {
         res.status(200).json({ "success": true, "data": teamList })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 
@@ -175,7 +170,7 @@ router.post("/removeTeamLink", async function (req, res) {
         const userID = await findUID(req.user, req);
         const isOwner = await verifyTeamOwner(req.body.teamUID, userID, req)
         if (!isOwner) {
-            res.status(400).json({ "succcess": false, "message": "User is not Owner" })
+            res.status(400).json({ "success": false, "message": "User is not Owner" })
             return
         }
 
@@ -193,7 +188,7 @@ router.post("/removeTeamLink", async function (req, res) {
         res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 
@@ -205,7 +200,7 @@ router.post("/leaveTeam", async function (req, res) {
         const ownerCheck = await verifyTeamOwner(req.body.teamUID, userID, req);
 
         if (ownerCheck) {
-            res.status(400).send("Owner cannot remove self. Please transfer ownership or use Delete Team").json({ "success": false });
+            res.status(400).json({ "success": false, "message": "Owner cannot remove self. Please transfer ownership or use Delete Team" });
             return
         }
 
@@ -218,10 +213,10 @@ router.post("/leaveTeam", async function (req, res) {
                 "teamID": teamID
             });
 
-        res.status(200).json({ "succcess": true })
+        res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 
 })
@@ -234,7 +229,7 @@ router.post("/updateTeamName", async function (req, res) {
         const teamID = await findTeamID(req.body.teamUID, req.body.teamNameOld, req);
 
         if (!ownerCheck) {
-            res.status(400).json({ "success": false }.send("Only the owner of a team may change its name"))
+            res.status(400).json({ "success": false, "message": "Only the owner of a team may change its name" })
             return
         }
 
@@ -252,7 +247,7 @@ router.post("/updateTeamName", async function (req, res) {
         res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 
@@ -264,7 +259,7 @@ router.post("/deleteTeam", async function (req, res) {
         const teamID = await findTeamID(req.body.teamUID, req.body.teamName, req);
 
         if (!ownerCheck) {
-            res.status(400).json({ "success": false }.send("Only the owner of a team may delete it"))
+            res.status(400).json({ "success": false, "message": "Only the owner of a team may delete it" })
             return
         }
 
@@ -290,7 +285,7 @@ router.post("/deleteTeam", async function (req, res) {
         res.status(200).json({ "success": true })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 
@@ -322,7 +317,7 @@ router.post("/loadTeamMemberList", async function (req, res) {
         res.status(200).json({ "success": true , "data" : finalList})
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 

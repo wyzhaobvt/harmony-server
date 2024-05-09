@@ -168,7 +168,7 @@ router.post("/createTeamRequest", async function (req, res) {
         res.status(200).json({ success: true })
     } catch (error) {
         console.log(error);
-        res.status(500)
+        res.status(500).json({ success: false, message: "An error has occurred" })
     }
 })
 
@@ -188,7 +188,7 @@ router.get("/loadIncomingTeamRequest", async function (req, res) {
         res.status(200).json({ success: true, data: requestList })
     } catch (error) {
         console.log(error);
-        res.status(500)
+        res.status(500).json({ success: false, message: "An error has occurred" })
     }
 })
 
@@ -247,7 +247,7 @@ router.post("/resolveIncomingTeamRequest", async function (req, res) {
         }
     } catch (error) {
         console.log(error);
-        res.status(500)
+        res.status(500).json({ success: false, message: "An error has occurred" })
     }
 })
 
@@ -275,7 +275,7 @@ router.post("/createFriendRequest", async function (req, res) {
         res.status(200).json({ success: true })
     } catch (error) {
         console.log(error);
-        res.status(500)
+        res.status(500).json({ success: false, message: "An error has occurred" })
     }
 })
 
@@ -295,7 +295,7 @@ router.get("/loadIncomingFriendRequest", async function (req, res) {
         res.status(200).json({ success: true, data: requestList })
     } catch (error) {
         console.log(error);
-        res.status(500)
+        res.status(500).json({ success: false, message: "An error has occurred" })
     }
 })
 
