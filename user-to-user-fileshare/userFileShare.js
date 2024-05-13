@@ -3,13 +3,26 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+  
+router.post("/testing", async (req, res) => {
+    await req.db.query(
+        `INSERT INTO files ( uid, name, deleted)
+        VALUES ( :uid, :name, false)`,
+        {
+            uid: `Unique13321`,
+            name: `na4hbhaha`
+        }
+    ); 
+    //can't add id and ownerID they are auto incremented and referenced by name
+    res.send('got it')
+})
 
 //need to add a remove chat directory for when chats get deleted
 // need to use function for GET User id or GET team id
 // Set up multer for file uploads
 //define destination and filename convention
 const uploadDir = path.join(__dirname, '../uploads')
-
+/* 
 router.use("*", async (req, res, next) => {
   const [, , teamUid] = req.params[0].split("/");
   try {
@@ -47,7 +60,7 @@ router.use("*", async (req, res, next) => {
   } catch (error) {
     next(new Error("An error occurred"));
   }
-});
+}); */
 
 router.use('*', (req, res, next) => {
     let urlParams = req.params[0].split('/');
@@ -77,7 +90,7 @@ const upload = multer({ storage: storage });
 //NOTE: upload.single must be the same as the input element name property
 //e.g. <input type="file" name="file">
 //3/21/24 will i need to a multiple file upload endpoint
-router.post('/upload/:chatId', upload.single('file'), (req, res) => {
+router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
     try{
       const {chatId} = req.params
       req.socket.to("online:" + chatId).emit("update:file_added", {
@@ -85,6 +98,16 @@ router.post('/upload/:chatId', upload.single('file'), (req, res) => {
         filename: req.file.originalname,
         user: req.user.username
       });
+
+      await req.db.query(
+        `INSERT INTO files ( uid, name, ownerID, deleted)
+        VALUES ( :uid, :name, ownerID, false)`,
+        {
+            uid: `Unique321321`,
+            name: `namewahaha`,
+            ownerID: `111111`
+        }
+        ); 
         return res.json({ 'filename': req.file.originalname, 'data': req.file });
     } catch(err) { 
         console.error(err);
@@ -97,7 +120,7 @@ router.get('/download/:chatId/:fileName', async (req, res) => {
     const {chatId, fileName} = req.params;
     const filePath = `${uploadDir}/${chatId}/${fileName}`;
     res.download(filePath, 'downloadMe',(err) => {if(err) console.error(err)});
-}); 
+});
 
 //file rename route
 router.post('/rename/:chatId/:fileName', (req, res) => {
@@ -111,7 +134,7 @@ router.post('/rename/:chatId/:fileName', (req, res) => {
     
     if(chatDir.includes(`${newFileName}.${fileType}`)){
        return res.json({"success": false, "status": 400, "message": `${newFileName} exists`});
-    }   
+    }
     
     fs.rename(oldFilePath, newFilePath, (err) => {
         if (err) throw err;
