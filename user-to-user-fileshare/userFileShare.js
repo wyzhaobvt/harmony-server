@@ -22,7 +22,7 @@ router.post("/testing", async (req, res) => {
 // Set up multer for file uploads
 //define destination and filename convention
 const uploadDir = path.join(__dirname, '../uploads')
-/* 
+
 router.use("*", async (req, res, next) => {
   const [, , teamUid] = req.params[0].split("/");
   try {
@@ -60,16 +60,18 @@ router.use("*", async (req, res, next) => {
   } catch (error) {
     next(new Error("An error occurred"));
   }
-}); */
+});
 
 router.use('*', (req, res, next) => {
     let urlParams = req.params[0].split('/');
     let chatId = urlParams[2];
     req.serverUploadPath = path.join(uploadDir, chatId);
     if (!fs.existsSync(req.serverUploadPath) && urlParams[1] === 'list'){
+        console.log("creating file dir")
         fs.mkdirSync(req.serverUploadPath, {recursive: true});
         next();
     }else{
+        console.log("not creating dir")
         next();
     }
 }) 
@@ -81,7 +83,7 @@ const storage = multer.diskStorage({
     filename: function (req, file, cb) { 
         let cleanName = file.originalname.split('.')
         const uniqueSuffix = Date.now();
-        cb(null, cleanName[0]+ '-'+ uniqueSuffix + '.' + cleanName[1] );
+        cb(null, cleanName[0]+ '-id-'+ uniqueSuffix + '.' + cleanName[1] );
     }
 });
 const upload = multer({ storage: storage });
@@ -92,22 +94,25 @@ const upload = multer({ storage: storage });
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
     try{
-      const {chatId} = req.params
+        const {chatId} = req.params
+        let fileNameSplit = req.file.filename.split(/-id-(.*?)\./)
+        let fileUid = fileNameSplit[1]
+        await req.db.query(
+        `INSERT INTO files ( uid, name, ownerID, deleted)
+        VALUES ( :uid, :name, ownerID, false)`,
+        {
+            uid: fileUid,
+            name: req.file.originalname,
+            ownerID: `111111`
+        }
+        );
+        
       req.socket.to("online:" + chatId).emit("update:file_added", {
         team: chatId,
         filename: req.file.originalname,
         user: req.user.username
-      });
-
-      await req.db.query(
-        `INSERT INTO files ( uid, name, ownerID, deleted)
-        VALUES ( :uid, :name, ownerID, false)`,
-        {
-            uid: `Unique321321`,
-            name: `namewahaha`,
-            ownerID: `111111`
-        }
-        ); 
+      });      
+      
         return res.json({ 'filename': req.file.originalname, 'data': req.file });
     } catch(err) { 
         console.error(err);
