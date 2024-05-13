@@ -3,19 +3,6 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-  
-router.post("/testing", async (req, res) => {
-    await req.db.query(
-        `INSERT INTO files ( uid, name, deleted)
-        VALUES ( :uid, :name, false)`,
-        {
-            uid: `Unique13321`,
-            name: `na4hbhaha`
-        }
-    ); 
-    //can't add id and ownerID they are auto incremented and referenced by name
-    res.send('got it')
-})
 
 //need to add a remove chat directory for when chats get deleted
 // need to use function for GET User id or GET team id
@@ -94,19 +81,22 @@ const upload = multer({ storage: storage });
 //3/21/24 will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
     try{
+        const userID = await findUID(req.user, req)
         const {chatId} = req.params
         let fileNameSplit = req.file.filename.split(/-id-(.*?)\./)
         let fileUid = fileNameSplit[1]
+
+        console.log(userID)
         await req.db.query(
         `INSERT INTO files ( uid, name, ownerID, deleted)
         VALUES ( :uid, :name, ownerID, false)`,
         {
             uid: fileUid,
             name: req.file.originalname,
-            ownerID: `111111`
+            ownerID: userID
         }
         );
-        
+
       req.socket.to("online:" + chatId).emit("update:file_added", {
         team: chatId,
         filename: req.file.originalname,
