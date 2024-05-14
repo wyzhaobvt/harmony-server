@@ -127,7 +127,7 @@ router.post("/updateUser", async function (req, res) {
     const userId = await findUID(req.user, req);
 
     // Duplicate Email Check
-    if (email !== req.user.email) {
+    if (email && email !== req.user.email) {
       const dupeEmail = await isDupeEmail(email, req);
 
       if (dupeEmail) {
