@@ -86,16 +86,16 @@ router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
         let fileNameSplit = req.file.filename.split(/-id-(.*?)\./)
         let fileUid = fileNameSplit[1]
 
-        console.log(userID)
         await req.db.query(
         `INSERT INTO files ( uid, name, ownerID, deleted)
-        VALUES ( :uid, :name, ownerID, false)`,
+        VALUES ( :uid, :name, ${userID}, false)`,
         {
             uid: fileUid,
-            name: req.file.originalname,
-            ownerID: userID
+            name: req.file.originalname
         }
         );
+
+        //5/17/24 - add file id to file metadata
 
       req.socket.to("online:" + chatId).emit("update:file_added", {
         team: chatId,
@@ -115,6 +115,15 @@ router.get('/download/:chatId/:fileName', async (req, res) => {
     const {chatId, fileName} = req.params;
     const filePath = `${uploadDir}/${chatId}/${fileName}`;
     res.download(filePath, 'downloadMe',(err) => {if(err) console.error(err)});
+
+    /* let fileUid = await req.db.query(
+        `SELECT uid FROM files
+        WHERE name = ${fileName}`
+    ); */
+
+    //obtain metadata uid + filename from front end
+    //use that uid to select file from directory -> filename + -id- + uid + .pdf
+    //res.download
 });
 
 //file rename route
@@ -154,6 +163,8 @@ router.post('/duplicate/:chatId/:fileName', async (req, res) => {
     let latestCopy;
     let fileCopyValue;
 
+    //5/17/24 - NEED TO ADD NEW UID
+    //split filename -id- uid
     if(fileCopiesArray.length === 1){
         //if you click on a root file with no copies
         if(cleanName.length === 2){
