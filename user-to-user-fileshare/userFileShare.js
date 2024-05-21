@@ -54,11 +54,9 @@ router.use('*', (req, res, next) => {
     let chatId = urlParams[2];
     req.serverUploadPath = path.join(uploadDir, chatId);
     if (!fs.existsSync(req.serverUploadPath) && urlParams[1] === 'list'){
-        console.log("creating file dir")
         fs.mkdirSync(req.serverUploadPath, {recursive: true});
         next();
     }else{
-        console.log("not creating dir")
         next();
     }
 })
@@ -111,18 +109,15 @@ router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
 }); 
 
 router.get('/getFileInfo/:chatId/:fileId', async (req, res) => {
-    const {chatId, fileId} = req.params;
-    console.log("getting file info")
+    const {fileId} = req.params;
     let getFileName = await req.db.query(
         `SELECT name FROM
         files WHERE 
         files.uid = :fileId;`,
-        {
-            fileId
-        }
+        { fileId }
     )
-    console.log(getFileName)
-    res.json({'filename': getFileName[0]})
+    let cleanName = cleanFileName(getFileName[0][0]['name'])
+    res.json({'fileName': cleanName[0]})
 })
  
 // File download route
@@ -132,9 +127,7 @@ router.get('/download/:chatId/:fileId', async (req, res) => {
         `SELECT name FROM
         files WHERE 
         files.uid = :fileId;`,
-        {
-            fileId
-        }
+        { fileId }
     )
     let fileWholeName = getFileName[0][0]['name']
     let fileNameSplit = fileWholeName.split('.')
