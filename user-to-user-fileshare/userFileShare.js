@@ -61,7 +61,7 @@ router.use('*', (req, res, next) => {
         console.log("not creating dir")
         next();
     }
-}) 
+})
  
 const storage = multer.diskStorage({
     destination: async function (req, file, cb) {
@@ -103,17 +103,18 @@ router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
         user: req.user.username
       });      
       
-        return res.json({ 'filename': req.file.originalname, 'data': req.file });
+        return res.json({ 'filename': req.file.originalname, 'data': req.file, 'UID': fileUid });
     } catch(err) { 
         console.error(err);
         return
     }
 }); 
-
+ 
 // File download route
-router.get('/download/:chatId/:fileName', async (req, res) => {
-    const {chatId, fileName} = req.params;
-    const filePath = `${uploadDir}/${chatId}/${fileName}`;
+router.get('/download/:chatId/:fileName/:fileId/:fileType', async (req, res) => {
+    const {chatId, fileName, fileId, fileType} = req.params;
+    const filePath = `${uploadDir}/${chatId}/${fileName}-id-${fileId}.${fileType}`;
+    console.log("file path", filePath)
     res.download(filePath, 'downloadMe',(err) => {if(err) console.error(err)});
 
     /* let fileUid = await req.db.query(
