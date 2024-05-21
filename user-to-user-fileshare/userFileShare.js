@@ -109,22 +109,42 @@ router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
         return
     }
 }); 
+
+router.get('/getFileInfo/:chatId/:fileId', async (req, res) => {
+    const {chatId, fileId} = req.params;
+    console.log("getting file info")
+    let getFileName = await req.db.query(
+        `SELECT name FROM
+        files WHERE 
+        files.uid = :fileId;`,
+        {
+            fileId
+        }
+    )
+    console.log(getFileName)
+    res.json({'filename': getFileName[0]})
+})
  
 // File download route
-router.get('/download/:chatId/:fileName/:fileId/:fileType', async (req, res) => {
-    const {chatId, fileName, fileId, fileType} = req.params;
+router.get('/download/:chatId/:fileId', async (req, res) => {
+    const {chatId, fileId} = req.params; 
+    let getFileName = await req.db.query(
+        `SELECT name FROM
+        files WHERE 
+        files.uid = :fileId;`,
+        {
+            fileId
+        }
+    )
+    let fileWholeName = getFileName[0][0]['name']
+    let fileNameSplit = fileWholeName.split('.')
+    let fileName = fileNameSplit[0]
+    let fileType = fileNameSplit[1]
+    
     const filePath = `${uploadDir}/${chatId}/${fileName}-id-${fileId}.${fileType}`;
-    console.log("file path", filePath)
+   
+    //query SQL to get file name from file id
     res.download(filePath, 'downloadMe',(err) => {if(err) console.error(err)});
-
-    /* let fileUid = await req.db.query(
-        `SELECT uid FROM files
-        WHERE name = ${fileName}`
-    ); */
-
-    //obtain metadata uid + filename from front end
-    //use that uid to select file from directory -> filename + -id- + uid + .pdf
-    //res.download
 });
 
 //file rename route
