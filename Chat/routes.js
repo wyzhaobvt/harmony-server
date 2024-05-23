@@ -39,7 +39,7 @@ router.post("/load", async (req, res) => {
 
 router.post("/create", async (req, res) => {
   try {
-    const { message, teamUID, teamName } = req.body;
+    const { message, teamUID, teamName, isFile, chatId } = req.body;
     const uid = Array.from(Array(254), () =>
       Math.floor(Math.random() * 36).toString(36)
     ).join("");
@@ -53,15 +53,18 @@ router.post("/create", async (req, res) => {
         .json({ success: false, message: "User does not have access to team" });
       return;
     }
+    //fileID must be a SQL query to get the UID using the filename
+    //need chatID and sort to the most recently added file
 
     await req.db.query(
-      `INSERT INTO teamschats (uid, teamID, messageUser, message, isFile, edited, deleted)
-      VALUES (:uid, :teamId, :userId, :message, 0, 0, 0);`,
-      {
+      `INSERT INTO teamschats (uid, teamID, messageUser, message, isFile, fileID, edited, deleted)
+      VALUES (:uid, :teamId, :userId, :message, :isFile, :fileID, 0, 0);`,
+      { 
         uid,
         teamId,
         userId,
         message,
+        isFile
       }
     );
 

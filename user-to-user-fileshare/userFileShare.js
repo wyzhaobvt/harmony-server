@@ -34,7 +34,7 @@ router.use("*", async (req, res, next) => {
         WHERE teamslinks.addUser = :addUser AND teams.uid = :uid AND teamslinks.deleted = false;`,
       {
         uid: teamUid,
-        addUser: userID,
+        addUser: userID, 
       }
     );
 
@@ -81,6 +81,7 @@ router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
     try{
         const userID = await findUID(req.user, req)
         const {chatId} = req.params
+        console.log(req.file)
         let fileNameSplit = req.file.filename.split(/-id-(.*?)\./)
         let fileUid = fileNameSplit[1]
 
@@ -92,14 +93,18 @@ router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
             name: req.file.originalname
         }
         );
-
+ 
         //5/17/24 - add file id to file metadata
 
-      req.socket.to("online:" + chatId).emit("update:file_added", {
+      /* 
+      5/22/24 TypeError: req.socket.to is not a function
+      -Lawrence: Not sure what this error is, I commented this part out 
+                 so that I could send info to the front end
+        req.socket.to("online:" + chatId).emit("update:file_added", {
         team: chatId,
         filename: req.file.originalname,
         user: req.user.username
-      });      
+      });     */  
       
         return res.json({ 'filename': req.file.originalname, 'data': req.file, 'UID': fileUid });
     } catch(err) { 
@@ -173,7 +178,7 @@ router.post('/duplicate/:chatId/:fileName', async (req, res) => {
     let fileCopiesArray = chatDir.filter(file => file.match(cleanName[0]));  
     fileCopiesArray.sort((a, b) =>
     a.localeCompare(b, "en-US", { numeric: true, ignorePunctuation: true })
-    ).reverse();
+    ).reverse(); 
     let latestCopy;
     let fileCopyValue;
 
