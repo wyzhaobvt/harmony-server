@@ -8,6 +8,7 @@ const path = require("path");
 require("dotenv").config();
 const chatRoutes = require("../Chat/routes");
 const calendarRoutes = require('../Calendar/calendarRoutes');
+const peerChatRoutes = require('../PeerChat/routes')
 
 const requestRoutes = require('../Database/requests.js');
 const teamRoutes = require('../Database/teamManagement.js');
@@ -23,6 +24,9 @@ const app = express();
 
 const server = http.createServer(app)
 const socketIo = require("socket.io");
+const userChatSocket = require("../Peer/userChatSocket.js");
+
+app.use(express.json({ limit: "50mb" }));
 
 const io = new socketIo.Server(server, {
   cors: {
@@ -39,7 +43,7 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
-
+userChatSocket(io);
 socketSetup({io, pool})
 
 app.use(async function (req, res, next) {
@@ -106,6 +110,7 @@ app.use(authenticateToken);
 app.use(express.static(path.join(__dirname, "../dist")));
 
 app.use("/api/chat", chatRoutes);
+app.use("/api/peerchat", peerChatRoutes);
 
 app.use("/api/database" , requestRoutes)
 app.use("/api/database" , teamRoutes)

@@ -12,8 +12,6 @@ const port = 2 + +process.env.SERVER_PORT;
 
 const app = express();
 
-router.use(express.json({ limit: "50mb" }))
-
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -318,7 +316,7 @@ router.get("/getUser", async (req, res) => {
 
     const userData = await req.db.query(
       `
-        SELECT email, username, profileURL
+        SELECT email, username, profileURL,id
         FROM users
         WHERE id = :userId
       `,
