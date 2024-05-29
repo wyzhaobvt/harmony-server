@@ -29,7 +29,6 @@ router.post("/load", async (req, res) => {
         teamId: teamId,
       }
     );
-    console.log("this is the CHATS", chats)
 
     res.json({ success: true, data: chats });
   } catch (error) {
@@ -54,8 +53,6 @@ router.post("/create", async (req, res) => {
         .json({ success: false, message: "User does not have access to team" });
       return;
     }
-    //fileID must be a SQL query to get the UID using the filename
-    //need chatID and sort to the most recently added file
 
     await req.db.query(
       `INSERT INTO teamschats (uid, teamID, messageUser, message, fileName, fileUID, edited, deleted)
