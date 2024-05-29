@@ -76,12 +76,11 @@ const upload = multer({ storage: storage });
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
 //e.g. <input type="file" name="file">
-//3/21/24 will i need to a multiple file upload endpoint
+//3/21/24 stretch goal - will i need to a multiple file upload endpoint
 router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
     try{
         const userID = await findUID(req.user, req)
         const {chatId} = req.params
-        console.log(req.file)
         let fileNameSplit = req.file.filename.split(/-id-(.*?)\./)
         let fileUid = fileNameSplit[1]
 
@@ -93,8 +92,6 @@ router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
             name: req.file.originalname
         }
         );
- 
-        //5/17/24 - add file id to file metadata
 
       /* 
       5/22/24 TypeError: req.socket.to is not a function
@@ -182,7 +179,6 @@ router.post('/duplicate/:chatId/:fileName', async (req, res) => {
     let latestCopy;
     let fileCopyValue;
 
-    //5/17/24 - NEED TO ADD NEW UID
     //split filename -id- uid
     if(fileCopiesArray.length === 1){
         //if you click on a root file with no copies
