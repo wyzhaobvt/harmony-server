@@ -34,7 +34,7 @@ router.use("*", async (req, res, next) => {
         WHERE teamslinks.addUser = :addUser AND teams.uid = :uid AND teamslinks.deleted = false;`,
       {
         uid: teamUid,
-        addUser: userID,
+        addUser: userID, 
       }
     );
 
@@ -59,7 +59,7 @@ router.use('*', (req, res, next) => {
     }else{
         next();
     }
-}) 
+})
  
 const storage = multer.diskStorage({
     destination: async function (req, file, cb) {
@@ -68,7 +68,7 @@ const storage = multer.diskStorage({
     filename: function (req, file, cb) { 
         let cleanName = file.originalname.split('.')
         const uniqueSuffix = Date.now();
-        cb(null, cleanName[0]+ '-'+ uniqueSuffix + '.' + cleanName[1] );
+        cb(null, cleanName[0]+ '-id-'+ uniqueSuffix + '.' + cleanName[1] );
     }
 });
 const upload = multer({ storage: storage });
@@ -76,28 +76,71 @@ const upload = multer({ storage: storage });
 // File upload route
 //NOTE: upload.single must be the same as the input element name property
 //e.g. <input type="file" name="file">
-//3/21/24 will i need to a multiple file upload endpoint
-router.post('/upload/:chatId', upload.single('file'), (req, res) => {
+//3/21/24 stretch goal - will i need to a multiple file upload endpoint
+router.post('/upload/:chatId', upload.single('file'), async (req, res) => {
     try{
-      const {chatId} = req.params
-      req.socket.to("online:" + chatId).emit("update:file_added", {
+        const userID = await findUID(req.user, req)
+        const {chatId} = req.params
+        let fileNameSplit = req.file.filename.split(/-id-(.*?)\./)
+        let fileUid = fileNameSplit[1]
+
+        await req.db.query(
+        `INSERT INTO files ( uid, name, ownerID, deleted)
+        VALUES ( :uid, :name, ${userID}, false)`,
+        {
+            uid: fileUid,
+            name: req.file.originalname
+        }
+        );
+
+      /* 
+      5/22/24 TypeError: req.socket.to is not a function
+      -Lawrence: Not sure what this error is, I commented this part out 
+                 so that I could send info to the front end
+        req.socket.to("online:" + chatId).emit("update:file_added", {
         team: chatId,
         filename: req.file.originalname,
         user: req.user.username
-      });
-        return res.json({ 'filename': req.file.originalname, 'data': req.file });
+      });     */  
+      
+        return res.json({ 'filename': req.file.originalname, 'data': req.file, 'UID': fileUid });
     } catch(err) { 
         console.error(err);
         return
     }
 }); 
 
+router.get('/getFileInfo/:chatId/:fileId', async (req, res) => {
+    const {fileId} = req.params;
+    let getFileName = await req.db.query(
+        `SELECT name FROM
+        files WHERE 
+        files.uid = :fileId;`,
+        { fileId }
+    )
+    let cleanName = cleanFileName(getFileName[0][0]['name'])
+    res.json({'fileName': cleanName[0]})
+})
+ 
 // File download route
-router.get('/download/:chatId/:fileName', async (req, res) => {
-    const {chatId, fileName} = req.params;
-    const filePath = `${uploadDir}/${chatId}/${fileName}`;
+router.get('/download/:chatId/:fileId', async (req, res) => {
+    const {chatId, fileId} = req.params; 
+    let getFileName = await req.db.query(
+        `SELECT name FROM
+        files WHERE 
+        files.uid = :fileId;`,
+        { fileId }
+    )
+    let fileWholeName = getFileName[0][0]['name']
+    let fileNameSplit = fileWholeName.split('.')
+    let fileName = fileNameSplit[0]
+    let fileType = fileNameSplit[1]
+    
+    const filePath = `${uploadDir}/${chatId}/${fileName}-id-${fileId}.${fileType}`;
+   
+    //query SQL to get file name from file id
     res.download(filePath, 'downloadMe',(err) => {if(err) console.error(err)});
-}); 
+});
 
 //file rename route
 router.post('/rename/:chatId/:fileName', (req, res) => {
@@ -111,7 +154,7 @@ router.post('/rename/:chatId/:fileName', (req, res) => {
     
     if(chatDir.includes(`${newFileName}.${fileType}`)){
        return res.json({"success": false, "status": 400, "message": `${newFileName} exists`});
-    }   
+    }
     
     fs.rename(oldFilePath, newFilePath, (err) => {
         if (err) throw err;
@@ -132,10 +175,11 @@ router.post('/duplicate/:chatId/:fileName', async (req, res) => {
     let fileCopiesArray = chatDir.filter(file => file.match(cleanName[0]));  
     fileCopiesArray.sort((a, b) =>
     a.localeCompare(b, "en-US", { numeric: true, ignorePunctuation: true })
-    ).reverse();
+    ).reverse(); 
     let latestCopy;
     let fileCopyValue;
 
+    //split filename -id- uid
     if(fileCopiesArray.length === 1){
         //if you click on a root file with no copies
         if(cleanName.length === 2){

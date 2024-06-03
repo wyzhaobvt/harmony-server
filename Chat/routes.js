@@ -21,7 +21,7 @@ router.post("/load", async (req, res) => {
     }
 
     const [chats] = await req.db.query(
-      `SELECT chats.uid, chats.sentAt, users.username AS sender, chats.message, users.profileURL, chats.isFile, chats.edited
+      `SELECT chats.uid, chats.sentAt, users.username AS sender, chats.message, users.profileURL, chats.isFile, chats.edited, chats.fileName, chats.fileUID
       FROM teamschats AS chats
       JOIN users ON chats.messageUser = users.id
       WHERE chats.teamID = :teamId AND chats.deleted = 0;`,
@@ -39,7 +39,7 @@ router.post("/load", async (req, res) => {
 
 router.post("/create", async (req, res) => {
   try {
-    const { message, teamUID, teamName } = req.body;
+    const { message, teamUID, teamName, fileName, fileUID } = req.body;
     const uid = Array.from(Array(254), () =>
       Math.floor(Math.random() * 36).toString(36)
     ).join("");
@@ -55,13 +55,15 @@ router.post("/create", async (req, res) => {
     }
 
     await req.db.query(
-      `INSERT INTO teamschats (uid, teamID, messageUser, message, isFile, edited, deleted)
-      VALUES (:uid, :teamId, :userId, :message, 0, 0, 0);`,
-      {
+      `INSERT INTO teamschats (uid, teamID, messageUser, message, fileName, fileUID, edited, deleted)
+      VALUES (:uid, :teamId, :userId, :message, :fileName, :fileUID, 0, 0);`,
+      { 
         uid,
         teamId,
         userId,
         message,
+        fileName,
+        fileUID
       }
     );
 
