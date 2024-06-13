@@ -1,21 +1,12 @@
 const http = require("http")
 const express = require("express");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
 const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 require("dotenv").config();
-const chatRoutes = require("../Chat/routes");
-const calendarRoutes = require('../Calendar/calendarRoutes');
-const peerChatRoutes = require('../PeerChat/routes')
+const apiRoutes = require("./api");
 
-const requestRoutes = require('../Database/requests.js');
-const teamRoutes = require('../Database/teamManagement.js');
-const authRoutes = require('../Database/userAuth.js');
-const userUtilsRoutes = require('../Database/userUtilities.js');
-const userToUserRoutes = require('../Database/userToUser.js');
-const fileRoutes = require("../user-to-user-fileshare/userFileShare")
 const {setup: socketSetup} = require("../Peer/sockets.cjs")
 
 const port = process.env.PORT || process.env.SERVER_PORT;
@@ -73,7 +64,6 @@ app.use(
     credentials: true,
   })
 );
-app.use('/api/calendar', calendarRoutes);
 
 app.use((req, res, next) => {
   res.secureCookie = (name, val, options = {}) => {
@@ -87,36 +77,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/api/users" , authRoutes)
-
-function authenticateToken(req, res, next) {
-  const token = req.cookies.token;
-  if (token == null) {
-    return res.sendStatus(401);
-  }
-
-  jwt.verify(token, process.env.JWT_KEY, (err, user) => {
-    if (err) {
-      console.log(err);
-      return res.sendStatus(403);
-    }
-    req.user = user;
-    next();
-  });
-}
-
-app.use(authenticateToken);
-
 app.use(express.static(path.join(__dirname, "../dist")));
 
-app.use("/api/chat", chatRoutes);
-app.use("/api/peerchat", peerChatRoutes);
-
-app.use("/api/database" , requestRoutes)
-app.use("/api/database" , teamRoutes)
-app.use("/api/database" , userToUserRoutes)
-app.use("/api/database" , userUtilsRoutes)
-app.use("/files", fileRoutes)
+app.use(apiRoutes);
 
 app.get("/server/status", (req, res) => {
   res.send("Server is functioning properly.");
