@@ -66,9 +66,9 @@ const storage = multer.diskStorage({
         cb(null, req.serverUploadPath);
     },
     filename: function (req, file, cb) { 
-        let cleanName = file.originalname.split('.')
+        let cleanName = cleanFileName(file.originalname)
         const uniqueSuffix = Date.now();
-        cb(null, cleanName[0]+ '-id-'+ uniqueSuffix + '.' + cleanName[1] );
+        cb(null, cleanName.name+ '-id-'+ uniqueSuffix + '.' + cleanName.extension );
     }
 });
 const upload = multer({ storage: storage });
@@ -119,7 +119,7 @@ router.get('/getFileInfo/:chatId/:fileId', async (req, res) => {
         { fileId }
     )
     let cleanName = cleanFileName(getFileName[0][0]['name'])
-    res.json({'fileName': cleanName[0]})
+    res.json({'fileName': cleanName.name, 'fileExtension': cleanName.extension})
 })
  
 // File download route
@@ -131,12 +131,8 @@ router.get('/download/:chatId/:fileId', async (req, res) => {
         files.uid = :fileId;`,
         { fileId }
     )
-    let fileWholeName = getFileName[0][0]['name']
-    let fileNameSplit = fileWholeName.split('.')
-    let fileName = fileNameSplit[0]
-    let fileType = fileNameSplit[1]
-    
-    const filePath = `${uploadDir}/${chatId}/${fileName}-id-${fileId}.${fileType}`;
+    const {name, extension} = cleanFileName(getFileName[0][0]['name'])
+    const filePath = `${uploadDir}/${chatId}/${name}-id-${fileId}.${extension}`;
    
     //query SQL to get file name from file id
     res.download(filePath, 'downloadMe',(err) => {if(err) console.error(err)});
@@ -172,7 +168,7 @@ router.post('/duplicate/:chatId/:fileName', async (req, res) => {
     //scan directory for files
     let chatDir = fs.readdirSync(`${uploadDir}/${chatId}`);
     //finds amount of file copies in directory
-    let fileCopiesArray = chatDir.filter(file => file.match(cleanName[0]));  
+    let fileCopiesArray = chatDir.filter(file => file.match(cleanName.name+"-id-"));
     fileCopiesArray.sort((a, b) =>
     a.localeCompare(b, "en-US", { numeric: true, ignorePunctuation: true })
     ).reverse(); 
@@ -182,26 +178,26 @@ router.post('/duplicate/:chatId/:fileName', async (req, res) => {
     //split filename -id- uid
     if(fileCopiesArray.length === 1){
         //if you click on a root file with no copies
-        if(cleanName.length === 2){
+        if(cleanName.copy === -1){
             //if it has no copy number
-                destPath = `${uploadDir}/${chatId}/${cleanName[0]}(1).${cleanName[1]}`;
+                destPath = `${uploadDir}/${chatId}/${cleanName.name}(1).${cleanName.extension}`;
             } else {
             //if it has a copy number
-                fileCopyValue = Number(cleanName[1]) + 1;
-                destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[3]}`;
+                fileCopyValue = Number(cleanName.copy) + 1;
+                destPath = `${uploadDir}/${chatId}/${cleanName.name}(${fileCopyValue}).${cleanName.extension}`;
         }
         fs.copyFileSync(sourcePath, destPath)
 
     }else if(fileCopiesArray.length >= 2){
         latestCopy = cleanFileName(fileCopiesArray[1]);
-        fileCopyValue = Number(latestCopy[1]) + 1;
+        fileCopyValue = Number(latestCopy.copy) + 1;
 
-        if(cleanName.length === 2){
+        if(cleanName.copy === -1){
         //if you click on root file that already has copies
-            destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[1]}`;
+            destPath = `${uploadDir}/${chatId}/${cleanName.name}(${fileCopyValue}).${cleanName.extension}`;
         } else {
         //if you click on a copy
-            destPath = `${uploadDir}/${chatId}/${cleanName[0]}(${fileCopyValue}).${cleanName[3]}`;
+            destPath = `${uploadDir}/${chatId}/${cleanName.name}(${fileCopyValue}).${cleanName.extension}`;
         }
         fs.copyFileSync(sourcePath, destPath)
     }
@@ -262,12 +258,41 @@ router.get('/list/:chatId', async (req, res) => {
 
 
 module.exports = router;
- 
-function cleanFileName(dir){
+
+/**
+ * Parses a file name into its components
+ * @param {string} dir
+ * @returns {{
+ *  name: string,
+ *  id: number | null,
+ *  copy: number,
+ *  extension: string
+ * }}
+ */
+function cleanFileName(dir) {
     if(typeof dir !== 'string'){
         return dir
     }
-    return dir.split(/[.()]/g);
+    if (!dir.includes(".")) {
+      return {
+        name: dir,
+        id: null,
+        copy: -1,
+        extension: ""
+      }
+    }
+    const match = dir.match(/^([a-zA-Z0-9._-]+)(?: ?\((\d+)\))?\.([a-zA-Z0-9]+)$/)
+
+    const fileName = match[1]
+    const fileId = match[2] ? Number(match[2]) : null
+    const fileCopy = match[3] ? Number(match[3]) : -1
+    const fileExtension = match[4]
+    return {
+      name: fileName,
+      id: fileId,
+      copy: fileCopy,
+      extension: fileExtension
+    }
 }
 
 //retrieves users id from the stored cookie

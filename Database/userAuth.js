@@ -4,13 +4,10 @@ const jwt = require("jsonwebtoken");
 const mysql = require("mysql2/promise");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
-const cloudinary = require('../cloudinary/cloudinary')
 require("dotenv").config();
 const router = express.Router()
 
-const port = 2 + +process.env.SERVER_PORT;
-
-const app = express();
+router.use(express.json({ limit: "50mb" }))
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -96,7 +93,7 @@ router.post("/registerUser",
             res.status(201).json({ "success": true })
         } catch (error) {
             console.log(error);
-            res.status(500).send("An error has occurred");
+            res.status(500).json({ "success": false, "message": "An error has occurred" });
         }
     }
 );
@@ -117,14 +114,14 @@ router.post("/loginUser",
                 return;
             }
 
-            const accessToken = jwt.sign({ "email": user.email, "username": req.body.username, "securePassword": user.password }, process.env.JWT_KEY);
+            const accessToken = jwt.sign({ "email": user.email, "username": user.username, "securePassword": user.password }, process.env.JWT_KEY);
 
             res.secureCookie("token", accessToken)
 
             res.status(200).json({ "success": true })
         } catch (error) {
             console.log(error);
-            res.status(500).send("An error has occurred");
+            res.status(500).json({ "success": false, "message": "An error has occurred" });
         }
     }
 );
@@ -137,7 +134,7 @@ router.post("/logoutUser",
         res.status(200).json({ success: true });
       } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
       }
     }
 );

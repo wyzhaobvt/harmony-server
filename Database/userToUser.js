@@ -156,7 +156,7 @@ router.get("/loadFriendsList", async function (req, res) {
         res.status(200).json({ "success": true, "data": exportData })
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 
@@ -189,7 +189,7 @@ router.post("/removeFriend", async function (req, res) {
         res.status(200).json({ "success": true})
     } catch (error) {
         console.log(error);
-        res.status(500).send("An error has occurred");
+        res.status(500).json({ "success": false, "message": "An error has occurred" });
     }
 })
 

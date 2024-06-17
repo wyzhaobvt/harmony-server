@@ -113,7 +113,7 @@ router.post("/deleteUser",
             res.status(200).json({ "success": true })
         } catch (error) {
             console.log(error);
-            res.status(500).send("An error has occurred");
+            res.status(500).json({ "success": false, "message": "An error has occurred" });
         }
     }
 );
@@ -125,7 +125,7 @@ router.post("/updateUser", async function (req, res) {
     const userId = await findUID(req.user, req);
 
     // Duplicate Email Check
-    if (email !== req.user.email) {
+    if (email && email !== req.user.email) {
       const dupeEmail = await isDupeEmail(email, req);
 
       if (dupeEmail) {
@@ -157,7 +157,7 @@ router.post("/updateUser", async function (req, res) {
     res.status(200).json({ success: true, message: "Profile has been updated successfully" });
   } catch (error) {
     console.log(error);
-    res.status(500).send("An error has occurred");
+    res.status(500).json({ "success": false, "message": "An error has occurred" });
   }
 });
 
@@ -266,7 +266,7 @@ router.post("/uploadAvatar", async (req, res) => {
     res.status(200).json({ success: true, data: uploadedImage });
   } catch (error) {
     console.log(error);
-    res.status(500).send("An error has occurred");
+    res.status(500).json({ "success": false, "message": "An error has occurred" });
   }
 });
 
@@ -305,7 +305,7 @@ router.delete("/deleteAvatar", async (req, res) => {
     res.status(200).json({ success: true, message: "Avatar deleted" });
   } catch (error) {
     console.log(error);
-    res.status(500).send("An error has occurred");
+    res.status(500).json({ "success": false, "message": "An error has occurred" });
   }
 });
 
@@ -328,7 +328,7 @@ router.get("/getUser", async (req, res) => {
     res.status(200).json({ success: true, data: userData[0] });
   } catch (error) {
     console.log(error);
-    res.status(500).send("An error has occurred");
+    res.status(500).json({ "success": false, "message": "An error has occurred" });
   }
 });
 
