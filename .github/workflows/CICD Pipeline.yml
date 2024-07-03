@@ -59,5 +59,14 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
+          context: .
           push: true
           tags: wyzhaobvt/harmony-server:latest
+          build-args: |
+            JWT_KEY=${{ secrets.JWT_KEY }}
+            SERVER_PORT=${{ secrets.SERVER_PORT }}
+            CLIENT_PORT=${{ secrets.CLIENT_PORT }}
+            DB_HOST=localhost
+            DB_USER=root
+            DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+            DB_NAME=${{ secrets.MYSQL_DATABASE }}
