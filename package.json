@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "HOST=0.0.0.0 node ./API/server.js"
+    "start": "HOST=0.0.0.0 node ./API/server.js",
     "user": "nodemon ./API/userAuth.js",
     "team": "nodemon ./API/teamManagement.js",
     "mail": "nodemon ./Mailer/mailer.js",
