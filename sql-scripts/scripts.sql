@@ -1,6 +1,35 @@
 CREATE DATABASE  IF NOT EXISTS `projectharmonyserver` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `projectharmonyserver`;
 
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `userCallLink` varchar(1020) DEFAULT NULL,
+  `profileURL` varchar(765) DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'testuser1@email.com','$2b$10$ycUnxyl60wHRFVB5ZRAfw.o8AYLCgrCBJAFj9XuqnHkmIt9JxxL9u','testuser1@email.com','$2b$10$EhGgrrWsQu/lGy/JyHyq7.1EZcu2TnsOdG1cD9SmZsTMg4VvJuLF2/lgzdqbq07bty9ae907c03y2lkyt5mast8lc96ysqjll7zaxt2iu5e1swyuflwsmcipinp9s9gnwh4r60r1556nypo0wfdvyjt6l8ji37nrfxnzeyuqzv4m0l7w5gucy7lxtr9ndvdsy2z0hoii5335wmi75tp9ilnmgns0cb48ua27zh4cxrryjiuylhnro3aecy0e7l75hvq57zte4cjtr3yv6om44e8ht61icm6hsyk3fqqldf7d07m7i2eo','',0),(2,'testuser2@email.com','$2b$10$vPPct2qWClEUSVhh.WUD4uBuqIX64yt0efznkd0qi1ZH8w.VwAyVO','testuser2@email.com','$2b$10$NqaolBfQYX8D6ZBP2Soqm.DyB.RL8lrOCXxh5BBUD9tPX.ET3OIhS/n7bcpkhebmcz6wd7geleqo05pqp1esbjhrn3t7bu2ak0jrte18ww9wdsqm0fxqqqzaid5b87p5tmgbo7u1k09h88y5vadsfwe0m4a7ce5ewhki5v34fy8xtgkhi0bihyhog7d2l7rqdkk8a3fl3qd7q79jq9klzlxjnuk1wz91konah3vxpbvgupnupf8hy86tbmpkcvn1islulh82vyrr4udffizc6f56agssocupmiixlj98p9n5bb0rxfdj','',0),(3,'testuser3@email.com','$2b$10$r0jrNwZ.JoZlM7rvJdWGWOpjejjNtLiZ73s5Mq7CBiQ7l8cavg.ey','testuser3@email.com','$2b$10$3Iphbo8CqEkNW2Q5I7xEn.AMQOVEsQE/C6ZvD9QXkgD/sYBiziozS/rgx79o6loacdwbfu7fysjowllmwanju97wnartxqhphso5mljml0cxct088e5tp74d3snnpt1vrz0ddo6a5o0jzvw5lijrr78armng9zek9cfsoo6bb2k588ty4zre5nz4iq7rg0xkbwbdb5r7ysn7ejft9nq7rad2ocohazvxxy7v2go7b3ltbkqc2biaj5cjmanhobhvuxqiwh472sx761u8056icmt2m2zsak0ye1oa7fh59kl47n2yvleq','',0),(4,'testuser4@email.com','$2b$10$e5kB06mvJ238ICOWXTvWEuwf4BAfK1usUXqfecEnCCGXSwjzKQjSm','testuser4@email.com','$2b$10$5vxm/Jo5hFyxZwwSwClRCeP9d..ozscVLEcl/uMI7UJXXoSSwomWy/sndl4un8lgfcumgw7c3h17vm8z5zn3esixfkq6iv93wrlgoykrybyjnhkv1n6k7dopqhq7icokq77gf8n00o6mzpq8v3gqqlouzb0v8oih237e0t4tqwmcc35herfjew2opmhv1bnfuj8fn4vbkpgz38v9h82bdh9gcjpxnm4m2f6fyeopwda4prz4vpsn5htcalgkok1ga0mzsl8ja32lkrczneilad5kt39jnydvs1hlzch0v8ecf7mnq2gq','',0),(5,'testuser5@email.com','$2b$10$tmOxj4iNj3qYRu/0s5ER4euRzj45dOp19KGuRoUbmnK6GFQvbCvg2','testuser5@email.com','$2b$10$RTWVYb46Ezu1gL9Zmm3nN.1BoddOLZb6H0vtdIbnWIuu4oHmyGuN6/zxt6zkj2du8maoaq5bxlp4lyzknynteh607k2le6uls5bx252rrro31ev4xjsxq7a5lsco19fee21e170lczuf06bjkkkzcygnmqq4e38nsjuprxhu6ukic5pysb1ii2nljmsb6k0irqhus1tyoepylkvx0r20ypiwwswoq4b1ljj2ubimxpnc6fyju0rqockpxvyufwzh6606r7mp51o0k0abpkabbu0fn1kyygekl0h3on9ug33srerqkwh2','',0);
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+
 
 DROP TABLE IF EXISTS `files`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -163,34 +192,7 @@ INSERT INTO `teamslinks` VALUES (1,6,4,0),(2,5,5,0),(3,4,4,0),(4,4,5,0),(5,4,1,0
 /*!40000 ALTER TABLE `teamslinks` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Table structure for table `users`
---
 
-DROP TABLE IF EXISTS `users`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `users` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) DEFAULT NULL,
-  `password` varchar(255) DEFAULT NULL,
-  `username` varchar(255) DEFAULT NULL,
-  `userCallLink` varchar(1020) DEFAULT NULL,
-  `profileURL` varchar(765) DEFAULT NULL,
-  `deleted` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `users`
---
-
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'testuser1@email.com','$2b$10$ycUnxyl60wHRFVB5ZRAfw.o8AYLCgrCBJAFj9XuqnHkmIt9JxxL9u','testuser1@email.com','$2b$10$EhGgrrWsQu/lGy/JyHyq7.1EZcu2TnsOdG1cD9SmZsTMg4VvJuLF2/lgzdqbq07bty9ae907c03y2lkyt5mast8lc96ysqjll7zaxt2iu5e1swyuflwsmcipinp9s9gnwh4r60r1556nypo0wfdvyjt6l8ji37nrfxnzeyuqzv4m0l7w5gucy7lxtr9ndvdsy2z0hoii5335wmi75tp9ilnmgns0cb48ua27zh4cxrryjiuylhnro3aecy0e7l75hvq57zte4cjtr3yv6om44e8ht61icm6hsyk3fqqldf7d07m7i2eo','',0),(2,'testuser2@email.com','$2b$10$vPPct2qWClEUSVhh.WUD4uBuqIX64yt0efznkd0qi1ZH8w.VwAyVO','testuser2@email.com','$2b$10$NqaolBfQYX8D6ZBP2Soqm.DyB.RL8lrOCXxh5BBUD9tPX.ET3OIhS/n7bcpkhebmcz6wd7geleqo05pqp1esbjhrn3t7bu2ak0jrte18ww9wdsqm0fxqqqzaid5b87p5tmgbo7u1k09h88y5vadsfwe0m4a7ce5ewhki5v34fy8xtgkhi0bihyhog7d2l7rqdkk8a3fl3qd7q79jq9klzlxjnuk1wz91konah3vxpbvgupnupf8hy86tbmpkcvn1islulh82vyrr4udffizc6f56agssocupmiixlj98p9n5bb0rxfdj','',0),(3,'testuser3@email.com','$2b$10$r0jrNwZ.JoZlM7rvJdWGWOpjejjNtLiZ73s5Mq7CBiQ7l8cavg.ey','testuser3@email.com','$2b$10$3Iphbo8CqEkNW2Q5I7xEn.AMQOVEsQE/C6ZvD9QXkgD/sYBiziozS/rgx79o6loacdwbfu7fysjowllmwanju97wnartxqhphso5mljml0cxct088e5tp74d3snnpt1vrz0ddo6a5o0jzvw5lijrr78armng9zek9cfsoo6bb2k588ty4zre5nz4iq7rg0xkbwbdb5r7ysn7ejft9nq7rad2ocohazvxxy7v2go7b3ltbkqc2biaj5cjmanhobhvuxqiwh472sx761u8056icmt2m2zsak0ye1oa7fh59kl47n2yvleq','',0),(4,'testuser4@email.com','$2b$10$e5kB06mvJ238ICOWXTvWEuwf4BAfK1usUXqfecEnCCGXSwjzKQjSm','testuser4@email.com','$2b$10$5vxm/Jo5hFyxZwwSwClRCeP9d..ozscVLEcl/uMI7UJXXoSSwomWy/sndl4un8lgfcumgw7c3h17vm8z5zn3esixfkq6iv93wrlgoykrybyjnhkv1n6k7dopqhq7icokq77gf8n00o6mzpq8v3gqqlouzb0v8oih237e0t4tqwmcc35herfjew2opmhv1bnfuj8fn4vbkpgz38v9h82bdh9gcjpxnm4m2f6fyeopwda4prz4vpsn5htcalgkok1ga0mzsl8ja32lkrczneilad5kt39jnydvs1hlzch0v8ecf7mnq2gq','',0),(5,'testuser5@email.com','$2b$10$tmOxj4iNj3qYRu/0s5ER4euRzj45dOp19KGuRoUbmnK6GFQvbCvg2','testuser5@email.com','$2b$10$RTWVYb46Ezu1gL9Zmm3nN.1BoddOLZb6H0vtdIbnWIuu4oHmyGuN6/zxt6zkj2du8maoaq5bxlp4lyzknynteh607k2le6uls5bx252rrro31ev4xjsxq7a5lsco19fee21e170lczuf06bjkkkzcygnmqq4e38nsjuprxhu6ukic5pysb1ii2nljmsb6k0irqhus1tyoepylkvx0r20ypiwwswoq4b1ljj2ubimxpnc6fyju0rqockpxvyufwzh6606r7mp51o0k0abpkabbu0fn1kyygekl0h3on9ug33srerqkwh2','',0);
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `userschats`
