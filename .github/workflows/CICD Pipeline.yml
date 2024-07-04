@@ -36,7 +36,7 @@ jobs:
 
       - name: Run SQL Scripts
         env:
-          MYSQL_HOST: 127.0.0.1
+          MYSQL_HOST: mysql
           MYSQL_PORT: 3306
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
@@ -66,10 +66,11 @@ jobs:
             JWT_KEY=${{ secrets.JWT_KEY }}
             SERVER_PORT=${{ secrets.SERVER_PORT }}
             CLIENT_PORT=${{ secrets.CLIENT_PORT }}
-            DB_HOST=localhost
+            DB_HOST=mysql
             DB_USER=root
             DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
             DB_NAME=${{ secrets.MYSQL_DATABASE }}
+
       - name: Deploy Harmony Server
         run: |
           docker run -d --name harmony-server \
@@ -82,5 +83,3 @@ jobs:
             -e DB_NAME=${{ secrets.MYSQL_DATABASE }} \
             -p 5000:5000 \
             wyzhaobvt/harmony-server:latest
-
-       
