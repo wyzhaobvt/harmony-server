@@ -70,3 +70,16 @@ jobs:
             DB_USER=root
             DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
             DB_NAME=${{ secrets.MYSQL_DATABASE }}
+      - name: Deploy Harmony Server
+        run: |
+          docker run -d --name harmony-server \
+            -e JWT_KEY=${{ secrets.JWT_KEY }} \
+            -e SERVER_PORT=${{ secrets.SERVER_PORT }} \
+            -e CLIENT_PORT=${{ secrets.CLIENT_PORT }} \
+            -e DB_HOST=mysql \
+            -e DB_USER=root \
+            -e DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
+            -e DB_NAME=${{ secrets.MYSQL_DATABASE }} \
+            -p 5000:5000 \
+            wyzhaobvt/harmony-server:latest
+      
