@@ -36,7 +36,7 @@ jobs:
 
       - name: Run SQL Scripts
         env:
-          MYSQL_HOST: mysql
+          MYSQL_HOST: localhost
           MYSQL_PORT: 3306
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
@@ -66,7 +66,7 @@ jobs:
             JWT_KEY=${{ secrets.JWT_KEY }}
             SERVER_PORT=${{ secrets.SERVER_PORT }}
             CLIENT_PORT=${{ secrets.CLIENT_PORT }}
-            DB_HOST=mysql
+            DB_HOST=localhost
             DB_USER=root
             DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
             DB_NAME=${{ secrets.MYSQL_DATABASE }}
@@ -77,7 +77,7 @@ jobs:
             -e JWT_KEY=${{ secrets.JWT_KEY }} \
             -e SERVER_PORT=${{ secrets.SERVER_PORT }} \
             -e CLIENT_PORT=${{ secrets.CLIENT_PORT }} \
-            -e DB_HOST=mysql \
+            -e DB_HOST=localhost \
             -e DB_USER=root \
             -e DB_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
             -e DB_NAME=${{ secrets.MYSQL_DATABASE }} \
