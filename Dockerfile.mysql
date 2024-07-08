@@ -1,0 +1,25 @@
+# Dockerfile.mysql
+
+# Use the official MySQL base image from Docker Hub
+FROM mysql:latest
+
+# Define build-time variables
+ARG MYSQL_ROOT_PASSWORD
+ARG MYSQL_DATABASE
+ARG MYSQL_USER
+ARG MYSQL_PASSWORD
+
+# Set environment variables using the build-time variables
+ENV MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+ENV MYSQL_DATABASE=${MYSQL_DATABASE}
+ENV MYSQL_USER=${MYSQL_USER}
+ENV MYSQL_PASSWORD=${MYSQL_PASSWORD}
+
+# Copy SQL scripts into the container
+COPY ./sql-scripts/*.sql /docker-entrypoint-initdb.d/
+
+# Grant privileges to the user on the database
+RUN echo "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';" > /docker-entrypoint-initdb.d/grant.sql
+
+# MySQL by default runs on port 3306
+EXPOSE 3306
