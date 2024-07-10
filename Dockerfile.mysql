@@ -14,7 +14,7 @@ ENV MYSQL_DATABASE=${MYSQL_DATABASE}
 ENV MYSQL_PASSWORD=${MYSQL_PASSWORD}
 
 # Copy SQL scripts into the container
-COPY ./sql-scripts/*.sql /docker-entrypoint-initdb.d/
+COPY ./sql-scripts/scripts.sql /docker-entrypoint-initdb.d/
 
 # MySQL by default runs on port 3306
 EXPOSE 3306
