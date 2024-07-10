@@ -47,7 +47,7 @@ jobs:
             JWT_KEY=${{ secrets.JWT_KEY }}
             SERVER_PORT=${{ secrets.SERVER_PORT }}
             CLIENT_PORT=${{ secrets.CLIENT_PORT }}
-            DB_HOST=mysql-container  # Update to use MySQL container name or IP
+            DB_HOST='mysql-container'  # Update to use MySQL container name or IP
             DB_USER=${{ secrets.MYSQL_USER }}
             DB_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
             DB_NAME=${{ secrets.MYSQL_DATABASE }}
