@@ -16,8 +16,5 @@ ENV MYSQL_PASSWORD=${MYSQL_PASSWORD}
 # Copy SQL scripts into the container
 COPY ./sql-scripts/*.sql /docker-entrypoint-initdb.d/
 
-# Grant privileges to the user on the database
-RUN echo "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO 'root'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';" > /docker-entrypoint-initdb.d/grant.sql
-
 # MySQL by default runs on port 3306
 EXPOSE 3306
