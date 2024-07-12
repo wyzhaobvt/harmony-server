@@ -110,7 +110,7 @@ router.post("/addToTeam", async function (req, res) {
         //optional : create a duplicate checker
 
         await req.db.query(
-            `INSERT INTO teamsLinks(teamID , addUser , deleted) 
+            `INSERT INTO teamslinks(teamID , addUser , deleted) 
             VALUES(:teamID , :addUser , false);`,
             {
                 addUser: targetID,

@@ -139,7 +139,7 @@ async function checkUserInTeam(teamUID, teamName, userID, req) {
 async function checkUserFriendsWithTarget(targetID, userID, req) {
   // check if the users are already friends
   const [friendList] = await req.db.query(`
-    SELECT * FROM usersLinks where ((userID1 = :userID AND userID2 = :targetID) OR (userID1 = :targetID AND userID2 = :userID)) AND deleted = false`,
+    SELECT * FROM userslinks where ((userID1 = :userID AND userID2 = :targetID) OR (userID1 = :targetID AND userID2 = :userID)) AND deleted = false`,
     {
       userID: userID,
       targetID: targetID
@@ -266,7 +266,7 @@ router.post("/resolveIncomingTeamRequest", async function (req, res) {
             const teamID = await findTeamID(teamUID , teamName, req)
 
             await req.db.query(
-                `INSERT INTO teamsLinks(teamID , addUser , deleted) 
+                `INSERT INTO teamslinks(teamID , addUser , deleted) 
                 VALUES(:teamID , :addUser , false);`,
                 {
                     addUser: targetID,
@@ -404,7 +404,7 @@ router.post("/resolveIncomingFriendRequest", async function (req, res) {
             const targetID = reqDataRaw.recieverID
 
             await req.db.query(
-                `INSERT INTO usersLinks(userID1 , userID2 , deleted) 
+                `INSERT INTO userslinks(userID1 , userID2 , deleted) 
                 VALUES(:sender , :reciever , false);`,
                 {
                     sender : senderID,

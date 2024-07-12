@@ -83,7 +83,7 @@ router.post("/deleteUser",
 
             //remove all user links
             await req.db.query(`
-            UPDATE userLinks
+            UPDATE userlinks
             SET deleted = true
             WHERE userID1 = :id OR usedID2 = :id AND deleted = false`,
             {
@@ -92,7 +92,7 @@ router.post("/deleteUser",
 
             //remove all teams links
             await req.db.query(`
-            UPDATE teamsLinks
+            UPDATE teamslinks
             SET deleted = true
             WHERE addUser = :id AND deleted = false`,
             {

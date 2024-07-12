@@ -137,16 +137,16 @@ router.get("/loadFriendsList", async function (req, res) {
 
         const [receivedList] = await req.db.query(`
         SELECT users.username, users.email, users.profileURL 
-        FROM usersLinks LEFT JOIN users ON userslinks.userID2 = users.id
-        WHERE userID1 = :userID and usersLinks.deleted = false`,
+        FROM userslinks LEFT JOIN users ON userslinks.userID2 = users.id
+        WHERE userID1 = :userID and userslinks.deleted = false`,
             {
                 userID: userID
             })
 
         const [sentList] = await req.db.query(`
             SELECT users.username, users.email, users.profileURL 
-            FROM usersLinks LEFT JOIN users ON userslinks.userID1 = users.id
-            WHERE userID2 = :userID and usersLinks.deleted = false`,
+            FROM userslinks LEFT JOIN users ON userslinks.userID1 = users.id
+            WHERE userID2 = :userID and userslinks.deleted = false`,
             {
                 userID: userID
             })
